@@ -25,6 +25,7 @@ function readScenarioFromHash() {
     debug: /[#&]debug\b/.test(location.hash),
     bot: /[#&]bot\b/.test(location.hash),
     advanceSeconds: advance ? Number(advance[1]) : 0,
+    critter: /[#&]critter\b/.test(location.hash),
   };
 }
 
@@ -32,6 +33,7 @@ function applyScenario(game, ui, scenario) {
   game.reset();
   ui.areRulesFrozen = scenario.hold;
   ui.showDebug = scenario.debug;
+  if (scenario.critter && !isCritterLook()) toggleTheme();
   ui.autopilot = scenario.bot ? createAutopilot('careful') : null;
   const ride = (typeKey, fromSide, compartmentIndex) => {
     const person = new Person(typeKey, fromSide);

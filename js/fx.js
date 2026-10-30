@@ -383,7 +383,8 @@ class Fx {
   onComplaint(person, reason) {
     const visual = this.visualOf(person);
     const rareLines = visual.look.rare?.lines?.[reason];
-    const lines = rareLines ?? person.type.complaintLines[reason] ?? person.type.complaintLines.tooFast;
+    const critterLines = isCritterLook() ? CRITTER_LINES[person.typeKey]?.[reason] : null;
+    const lines = rareLines ?? critterLines ?? person.type.complaintLines[reason] ?? person.type.complaintLines.tooFast;
     this.bubbles.push({ person, visual, text: lines[Math.floor(Math.random() * lines.length)], age: 0 });
     this.happyStreak = 0;
     this.lastComplaintAge = 0;

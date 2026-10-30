@@ -77,7 +77,7 @@ function doormanRank(game) {
 /** "Intern · too fast · 64 °/s (max 60)" for the strike log on the end screen. */
 function describeComplaint(entry) {
   const type = PERSON_TYPES[entry.typeKey];
-  const who = entry.rareName ? entry.rareName.replace(/^./, (c) => c.toUpperCase()) : type.displayName;
+  const who = entry.rareName ? entry.rareName.replace(/^./, (c) => c.toUpperCase()) : displayNameFor(entry.typeKey);
   if (entry.reason === 'breach') return [who, 'got into the lobby'];
   if (entry.reason === 'tooFast') return [who, `too fast: ${Math.round(entry.speed)} °/s (max ${type.comfortMaxSpeed})`];
   return [who, `too slow: under ${type.comfortMinSpeed} °/s for 1.5 s`];

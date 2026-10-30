@@ -26,8 +26,11 @@ function drawTitleScreen(ctx, fx) {
   ctx.fillText('Monday, 8:55', CANVAS_WIDTH / 2, y + 82);
   ctx.fillStyle = PALETTE.inkSoft;
   ctx.font = font(15, '500');
-  ctx.fillText('Everyone in the city has to be at work by 9:00, and every one of them', CANVAS_WIDTH / 2, y + 126);
-  ctx.fillText('goes through your revolving door. One door speed. Very different people.', CANVAS_WIDTH / 2, y + 146);
+  const premise = isCritterLook()
+    ? ['Every critter in the village has to be at work by 9:00, and every one', 'of them goes through your revolving door. One door speed. Very different tails.']
+    : ['Everyone in the city has to be at work by 9:00, and every one of them', 'goes through your revolving door. One door speed. Very different people.'];
+  ctx.fillText(premise[0], CANVAS_WIDTH / 2, y + 126);
+  ctx.fillText(premise[1], CANVAS_WIDTH / 2, y + 146);
 
   // Left column: controls
   const columnTop = y + 186;
@@ -66,7 +69,7 @@ function drawTitleScreen(ctx, fx) {
     ctx.font = font(13, 'bold');
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.fillText(type.displayName, rightX + 58, rowY - 6);
+    ctx.fillText(displayNameFor(typeKey), rightX + 58, rowY - 6);
     ctx.fillStyle = PALETTE.inkSoft;
     ctx.font = font(12, '500');
     const note = { officeWorker: 'easy-going', manager: 'hates slow doors', intern: 'six coffees, careful', courier: 'needs a whole compartment' }[typeKey];
@@ -98,6 +101,19 @@ function drawTitleScreen(ctx, fx) {
     ctx.font = font(11, '600');
     ctx.fillText(mode.note, bx + 26 + mode.keyWidth, buttonY - lift + 44);
   });
+  // Look switch: office or critters
+  const lookLabel = isCritterLook() ? 'CRITTER LOOK: ON' : 'CRITTER LOOK: OFF';
+  ctx.font = font(10, 'bold', FONT_DISPLAY);
+  const chipWidth = ctx.measureText(lookLabel).width + 62;
+  const chipX = CANVAS_WIDTH / 2 - chipWidth / 2;
+  const chipY = y + height + 12;
+  fillRoundRect(ctx, chipX, chipY, chipWidth, 26, 13, isCritterLook() ? '#f2a7a0' : 'rgba(251, 246, 236, 0.92)');
+  drawKeyCap(ctx, chipX + 6, chipY + 3, 22, 'C', { height: 18, fontSize: 10 });
+  ctx.fillStyle = PALETTE.ink;
+  ctx.font = font(10, 'bold', FONT_DISPLAY);
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  fillSpacedText(ctx, lookLabel, chipX + 36, chipY + 13.5, 1.2);
   if (!fx.hintsShown.size) {
     // First visit this page load: point at the tutorial
     const bob = Math.sin(fx.time * 4) * 3;

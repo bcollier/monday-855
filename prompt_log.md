@@ -152,3 +152,29 @@ Mistakes caught along the way:
 - the tip card covered the street WAIT sign (moved)
 - a key-cap helper left text centered, so "TO TRY AGAIN" overlapped the SPACE key
 - a stale test harness was missing the new script (rebuilt from `index.html`)
+
+## 12. More depth, less stress, more cute
+
+**Prompt:**
+> the game needs to have more complexity to it. perhaps bad people trying to get in, or more doors to keep track of. it also needs a very simple tutorial. the game shoudl be fun, not a stress ball having to learn every mechanic in the first 30 seconds of the game
+
+**What happened:** Claude pointed out the conflict with the spec's "one circular object" design and asked three questions. Answers:
+- troublemakers rather than a second door
+- a Classic + Rush split, so Classic stays exactly to the spec
+- guided practice for the tutorial
+
+Built:
+- **Rush rules**, with 8 new tests.
+- **A smarter bot.** It now holds the gate for troublemakers. A careful bot survives about 85% of Rush rounds; a sloppy one that never uses the gates survives 0%.
+- **The tutorial**, played through end to end by a scripted harness: all 7 steps in 23 s.
+- **A title menu** with T / Space / R.
+
+**Prompt (mid-build):**
+> i think the cute factor should be higher. would it still be up to spec if we changed the setting to somethign more like animal crossing? cute animals pushing cute animal babies in their carts? could we build a version like this and allow people to swtich to nintendo mode or omsething?
+
+**What happened:** Claude said yes, as a switchable look, because the spec defines the types by behavior and asks only for flat shapes. It flagged that the mode couldn't use Nintendo's or Animal Crossing's names or characters. The result is an original "Critter look" (C): a cozy animal cast and village scenery, with a duck pushing a stroller of ducklings as the courier.
+
+Mistakes caught along the way:
+- a scripted edit stopped halfway on a wrong anchor string, and was re-run
+- a new scenario name clashed with an existing one (`rush`), renamed `rushMode`
+- the owl receptionist was drawn on top of the human one

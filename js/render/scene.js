@@ -12,14 +12,15 @@ let sceneCache = null;
 
 /** Draws the static background, building it the first time (or when the pixel ratio changes). */
 function drawSceneBackground(ctx, pixelRatio) {
-  if (!sceneCache || sceneCache.pixelRatio !== pixelRatio) {
+  if (!sceneCache || sceneCache.pixelRatio !== pixelRatio || sceneCache.theme !== activeTheme) {
     const canvas = document.createElement('canvas');
     canvas.width = CANVAS_WIDTH * pixelRatio;
     canvas.height = CANVAS_HEIGHT * pixelRatio;
     const cacheCtx = canvas.getContext('2d');
     cacheCtx.scale(pixelRatio, pixelRatio);
-    paintStaticScene(cacheCtx);
-    sceneCache = { canvas, pixelRatio };
+    if (isCritterLook()) paintCritterScene(cacheCtx);
+    else paintStaticScene(cacheCtx);
+    sceneCache = { canvas, pixelRatio, theme: activeTheme };
   }
   ctx.drawImage(sceneCache.canvas, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 }
@@ -123,7 +124,7 @@ function paintElevators(ctx, wallX, centerY, side) {
   ctx.fill();
 }
 
-function paintReceptionDesk(ctx, x, y) {
+function paintReceptionDesk(ctx, x, y, withReceptionist = true) {
   // A curved counter bulging toward the door, the receptionist behind it.
   const radius = 64;
   const from = Math.PI * 0.12;
@@ -169,6 +170,10 @@ function paintReceptionDesk(ctx, x, y) {
   fillCircle(ctx, bell.x, bell.y, 3.5, PALETTE.brass);
   // Receptionist and chair, facing the door
   fillCircle(ctx, x + 2, y + 14, 12, '#3d4250');
+  if (!withReceptionist) {
+    ctx.restore();
+    return;
+  }
   fillEllipse(ctx, x, y + 26, 7.5, 12, Math.PI / 2, '#6b4f7a');
   fillCircle(ctx, x, y + 27, 5.8, '#3b2a22');
   fillCircle(ctx, x, y + 29.5, 4.2, '#c98b62');
@@ -479,8 +484,11 @@ function drawCars(ctx, cars) {
     ctx.translate(car.x, car.y);
     if (car.direction < 0) ctx.scale(-1, 1);
     const length = car.length;
-    fillRoundRect(ctx, -length / 2 + 3, -9 - 2, length, 18, 6, 'rgba(0,0,0,0.25)');
-    fillRoundRect(ctx, -length / 2, -9, length, 18, 6, car.color);
+    const isCritter = isCritterLook();
+    const body = isCritter ? CRITTER_SWEATERS[Math.floor(car.length * 7) % CRITTER_SWEATERS.length] : car.color;
+    const radius = isCritter ? 9 : 6;
+    fillRoundRect(ctx, -length / 2 + 3, -9 - 2, length, 18, radius, 'rgba(0,0,0,0.25)');
+    fillRoundRect(ctx, -length / 2, -9, length, 18, radius, body);
     // Windshield and rear window, roof highlight
     fillRoundRect(ctx, length * 0.08, -7, length * 0.18, 14, 3, 'rgba(30, 40, 60, 0.75)');
     fillRoundRect(ctx, -length * 0.36, -7, length * 0.12, 14, 3, 'rgba(30, 40, 60, 0.6)');

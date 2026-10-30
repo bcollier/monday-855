@@ -56,6 +56,7 @@ const DEBUG_SPAWN_KEYS = { Digit1: 'officeWorker', Digit2: 'manager', Digit3: 'i
 
 function handleOneShotKeys() {
   if (wasKeyPressed('KeyD')) ui.showDebug = !ui.showDebug;
+  if (wasKeyPressed('KeyC')) toggleTheme();
 
   const isPractice = game.mode === 'tutorial' && game.phase !== 'title';
   if (game.phase === 'title') {

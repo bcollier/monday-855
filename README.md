@@ -35,17 +35,28 @@ Add a hash to the URL:
 
 | Hash | Shows |
 |---|---|
+| `#scenario=tutorial` / `#scenario=rushMode` | start the tutorial / a Rush round |
 | `#scenario=play` | skips the title screen |
 | `#scenario=conflict` | a manager and an intern riding together: NO SAFE SPEED |
 | `#scenario=rush` | 8:59, long lines, a full door |
 | `#scenario=paused`, `#scenario=title` | those screens |
 | `#scenario=fired` / `gridlock` / `madeIt` | the end screens |
 
-Extra flags: `&hold` freezes the rules (animations keep going), `&debug` opens the debug overlay, `&bot` lets the simulated player play, `&advance=60` fast-forwards 60 seconds before the first frame. Example: `index.html#scenario=play&bot&advance=150` shows 8:59 of a round the bot is playing.
+Extra flags: `&critter` switches to the Critter look, `&hold` freezes the rules (animations keep going), `&debug` opens the debug overlay, `&bot` lets the simulated player play, `&advance=60` fast-forwards 60 seconds before the first frame. Example: `index.html#scenario=play&bot&advance=150` shows 8:59 of a round the bot is playing.
 
 ---
 
 ## 2. How to play
+
+**Three ways to play** (chosen on the title screen):
+
+| Key | Mode | What it is |
+|---|---|---|
+| **T** | Tutorial | Seven short steps, about a minute. No clock, no strikes. Esc leaves. |
+| **Space** | Classic | Exactly SPEC.md. This is the mode the acceptance criteria describe. |
+| **R** | Rush | Classic plus **troublemakers**: a pushy salesperson, a pickpocket and a kid who just wants to spin join the street line about every 15 s. Hold **↓** while one is at the front and after 2.5 s they give up. Let one in and it's a strike. |
+
+**Critter look:** press **C** at any time to switch the whole cast and scenery to cozy animals: commuter bunnies, cats, bears, frogs and mice; a late fox; a coffee squirrel; a duck pushing a stroller of ducklings; a raccoon, a mole and a puppy as the troublemakers. It's only a different look: same rules, same comfort ranges, same criteria.
 
 | Key | Action |
 |---|---|
@@ -53,7 +64,8 @@ Extra flags: `&hold` freezes the rules (animations keep going), `&debug` opens t
 | **↓** (hold) | Street line waits: a belt closes and nobody from the street steps in. |
 | **↑** (hold) | Lobby line waits. |
 | **P** or **Esc** | Pause / unpause. Leaving the browser tab also pauses. |
-| **R** | New round from the end screen (**Space** works too, after a moment). |
+| **R** | New round in the same mode from the end screen (**Space** works too, after a moment). **Esc** goes back to the menu. |
+| **C** | Switch between the office look and the Critter look. |
 | **D** | Debug overlay. While it's open, **1–4** add a worker / manager / intern / courier to the street line (hold **Shift** for the lobby line). |
 
 **Goal:** survive from 8:55 to 9:00 (3 real minutes) and deliver as many people as you can.
@@ -88,7 +100,7 @@ A rider complains **immediately** if the door is faster than their range, and af
 
 ## 3. Acceptance criteria status
 
-All 31 criteria in SPEC.md §3 are met. "Tested" means a check in `tests/rules_test.js`; "seen" means checked in the running game (headless Chrome screenshots and a browser harness that sends real key events; Firefox rendering checked headless).
+All 31 criteria in SPEC.md §3 are met in **Classic** mode (Space on the title screen); Rush and the tutorial are additions on top (SPEC.md, "Additions"). "Tested" means a check in `tests/rules_test.js`; "seen" means checked in the running game (headless Chrome screenshots and a browser harness that sends real key events; Firefox rendering checked headless).
 
 | # | Status | How it was checked / notes |
 |---|---|---|
@@ -139,6 +151,7 @@ js/person.js          PERSON_TYPES table, sharedComfortRange(), Person: one pass
 js/queue.js           Queue: one line of waiting people and the rules for stepping in
 js/game.js            Game: one round's rules, clock, spawning, exits, complaints, win/lose; emits events
 js/autopilot.js       a simulated player (used by tools/sim.js and #scenario=...&bot)
+js/tutorial.js        the guided practice: steps, checks, kind retries
 js/scenarios.js       the #scenario= moments
 js/surprises.js       visual-only flourishes: rare looks, streaks, rank, the pigeon, rain
 js/fx.js              the visual-only layer: walking, gliding, particles, bubbles, hints, street life
@@ -148,7 +161,10 @@ js/render/scene.js    lobby, facade, street (cached), queue lanes, WAIT belts, c
 js/render/doorway.js  the door: floor, wings, glass housing
 js/render/characters.js  the four passenger types, mood rings, warning signs
 js/render/effects.js  floor stains, particles, speech bubbles
-js/render/extras.js   floaters, banners, streak call-outs, pigeon, rain, dogs, countdown
+js/render/extras.js   floaters, banners, streak call-outs, pigeon, rain, dogs, countdown, HOLD sign
+js/render/critters.js the Critter look's cast (and the look switch)
+js/render/critter_scene.js  the Critter look's lobby, meadow and lane
+js/render/lessons.js  the tutorial card and focus ring
 js/render/meter.js    the speed meter
 js/render/hud.js      delivered, flip clock, strikes, tips, debug overlay
 js/render/screens.js  title, pause, end screens

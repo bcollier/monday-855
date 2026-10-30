@@ -37,6 +37,12 @@ function drawPersonFigure(ctx, x, y, facing, typeKey, look, pose = {}) {
     fillEllipse(ctx, 3 - step * 5, 5, 4, 2.4, 0, '#2a2a30');
   }
 
+  if (isCritterLook()) {
+    ctx.scale(1.1, 1.1);   // critters are drawn a touch bigger, so their faces read
+    drawCritterFigure(ctx, typeKey, look, pose);
+    ctx.restore();
+    return;
+  }
   switch (typeKey) {
     case 'manager': drawManager(ctx, look, pose); break;
     case 'intern': drawIntern(ctx, look, pose); break;

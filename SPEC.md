@@ -212,3 +212,13 @@ Not part of this game, even if there's time left: sound and music, multiple leve
 | Queue layout | Straight lines out of each opening | Each line runs 3 spots straight out, then turns (street to the right, lobby to the left) | Makes room for the speed meter (bottom) and the clock (top) without covering a queue. Visual only. |
 
 **Considered, not changed:** the 8:59 arrival interval. With 1.5 s, the street line averages about 2.4 people during 8:59 for a careful bot, which is less crowded than §1 describes. With **1.2 s** it averages about 3.3, with a careful-bot survival rate around 80%. AC #22 names 1.5 s, so it stays at 1.5 s until the spec owner decides. To try it, change the last entry of `STREET_SPAWN_RAMP` in `js/constants.js` and run `node tools/sim.js`.
+
+---
+
+## Additions (v2)
+
+*Added on top of the spec. Classic mode, the default when Space is pressed on the title screen, is still exactly the game described above and meets every acceptance criterion.*
+
+- **Rush mode** (R on the title screen). Classic plus *troublemakers*: someone who must not get in joins the street line about every 15 s from 0:20 (`TROUBLEMAKER_*` in `js/constants.js`). If ↓ is held while one is at the front of the line (and has finished walking up), they give up after 2.5 s and leave. If one steps into the door it counts as a strike, the same as a complaint. Any door speed suits them, so they never complain about speed, and they don't count as delivered. This gives the gates a second job and a new trade-off: holding ↓ keeps the troublemaker out but stalls everyone behind them.
+- **Tutorial** (T on the title screen). Seven guided steps in a practice round: no clock, no automatic arrivals, strikes don't count, the round never ends.
+- **Critter look** (C at any time). Only a different look: every animal is still one of the four passenger types (or a troublemaker), with the same comfort ranges and rules.

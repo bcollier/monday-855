@@ -115,7 +115,7 @@ function drawSpeedMeter(ctx, game, fx) {
     ctx.font = font(10, ridersOfType.length ? 'bold' : '600');
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.fillText(METER_LANE_NAMES[typeKey], METER.x + 44, y + METER.laneHeight / 2 + 0.5);
+    ctx.fillText(displayNameFor(typeKey, 'short'), METER.x + 44, y + METER.laneHeight / 2 + 0.5);
 
     // Lane guide
     ctx.fillStyle = 'rgba(31, 36, 48, 0.05)';
