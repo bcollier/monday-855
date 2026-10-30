@@ -56,12 +56,22 @@ const FINAL_MINUTE_STARTS_AT = ROUND_DURATION_SECONDS * (ROUND_GAME_MINUTES - 1)
 // ---- Spawning ----
 // Street arrivals speed up as 9:00 approaches (SPEC 2.7). One game minute = 36 real
 // seconds, so 8:57 is at 72 s and 8:59 at 144 s.
+// streetMix: relative spawn weights for that part of the round (SPEC "Tuning
+// changes"). It starts calm (mostly office workers, who are fine at almost any
+// speed) so a new player learns the door before the manager/intern conflict
+// arrives in numbers with the crowd. Office workers stay the most common type in
+// every part (AC #15). The last part is the SPEC 2.5 table, which is also each
+// type's own weight in PERSON_TYPES.
 const STREET_SPAWN_RAMP = [
-  { fromSecond: 0, intervalSeconds: 4 },     // 8:55–8:57
-  { fromSecond: 72, intervalSeconds: 2.5 },  // 8:57–8:59
-  { fromSecond: 144, intervalSeconds: 1.5 }, // 8:59–9:00
+  { fromSecond: 0, intervalSeconds: 4,     // 8:55–8:57
+    streetMix: { officeWorker: 85, manager: 6, intern: 6, courier: 3 } },
+  { fromSecond: 72, intervalSeconds: 2.5,  // 8:57–8:59
+    streetMix: { officeWorker: 70, manager: 13, intern: 10, courier: 7 } },
+  { fromSecond: 144, intervalSeconds: 1.2, // 8:59–9:00 (SPEC said 1.5; see "Tuning changes")
+    streetMix: { officeWorker: 55, manager: 20, intern: 15, courier: 10 } },
 ];
-const LOBBY_SPAWN_INTERVAL = 10;       // s, for the whole round
+const LOBBY_SPAWN_INTERVAL = 10;               // s, until 8:59
+const LOBBY_FINAL_MINUTE_SPAWN_INTERVAL = 6;   // s, during 8:59: the morning rush hits both sides
 const LOBBY_FIRST_SPAWN_SECONDS = 10;  // the first lobby person appears one interval in
 
 // ---- Rush mode: troublemakers ----
@@ -69,6 +79,7 @@ const LOBBY_FIRST_SPAWN_SECONDS = 10;  // the first lobby person appears one int
 // never spawns troublemakers, so it plays exactly as specified.
 const TROUBLEMAKER_FIRST_SECONDS = 20;     // first one arrives at about 8:55:33
 const TROUBLEMAKER_INTERVAL_SECONDS = 15;  // average gap; each gap is 70–130% of this
+const TROUBLEMAKER_LAST_SECONDS = 156;    // none arrive after about 8:59:20, so the end is about the crowd (SPEC "Tuning changes")
 const TROUBLEMAKER_PATIENCE_SECONDS = 2.5; // held at the front of the street line this long, they give up
 
 // ---- Main loop ----

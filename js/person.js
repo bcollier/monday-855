@@ -88,17 +88,22 @@ const PERSON_TYPES = {
   },
 };
 
-/** Picks a random type key for the given side, using the spawn weights. */
-function pickPersonTypeKey(side, randomNumber) {
+/**
+ * Picks a random type key for the given side, using the spawn weights.
+ * mix (optional): { typeKey: weight } to use instead of the types' own weights,
+ * e.g. a part of the round's streetMix from STREET_SPAWN_RAMP.
+ */
+function pickPersonTypeKey(side, randomNumber, mix) {
   const weightField = side === 'street' ? 'streetSpawnWeight' : 'lobbySpawnWeight';
-  const typeKeys = Object.keys(PERSON_TYPES).filter((key) => PERSON_TYPES[key][weightField] > 0);
+  const weightOf = (key) => (mix ? mix[key] || 0 : PERSON_TYPES[key][weightField]);
+  const typeKeys = Object.keys(PERSON_TYPES).filter((key) => weightOf(key) > 0);
   if (typeKeys.length === 0) {
     throw new Error(`No passenger type has ${weightField} > 0. Add one to PERSON_TYPES before spawning on the ${side} side.`);
   }
-  const totalWeight = typeKeys.reduce((sum, key) => sum + PERSON_TYPES[key][weightField], 0);
+  const totalWeight = typeKeys.reduce((sum, key) => sum + weightOf(key), 0);
   let remaining = randomNumber * totalWeight;
   for (const key of typeKeys) {
-    remaining -= PERSON_TYPES[key][weightField];
+    remaining -= weightOf(key);
     if (remaining < 0) return key;
   }
   return typeKeys[typeKeys.length - 1];

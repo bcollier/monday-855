@@ -211,13 +211,28 @@ Not part of this game, even if there's time left: sound and music, multiple leve
 | **Arrival walk-up** (new rule, `ARRIVAL_WALK_SECONDS`) | A new arrival could step in on the same frame they appeared | A new arrival takes **2 s** to walk up before they can step in. They count toward the gridlock limit straight away. | Someone arriving while a compartment was lined up stepped straight into a fast door with no chance to react. That caused most complaints in simulated play (a "careful" bot survived 3% of rounds). With the walk-up, the speed meter's NEXT preview gives the player time to slow down or hold the gate. Fits §2.3: "people arrive and line up". |
 | Queue layout | Straight lines out of each opening | Each line runs 3 spots straight out, then turns (street to the right, lobby to the left) | Makes room for the speed meter (bottom) and the clock (top) without covering a queue. Visual only. |
 
-**Considered, not changed:** the 8:59 arrival interval. With 1.5 s, the street line averages about 2.4 people during 8:59 for a careful bot, which is less crowded than §1 describes. With **1.2 s** it averages about 3.3, with a careful-bot survival rate around 80%. AC #22 names 1.5 s, so it stays at 1.5 s until the spec owner decides. To try it, change the last entry of `STREET_SPAWN_RAMP` in `js/constants.js` and run `node tools/sim.js`.
+| **Street arrival mix by part of the round** (`streetMix` in `STREET_SPAWN_RAMP`) | One mix all round (§2.5 table: workers 55, managers 20, interns 15, couriers 10) | **8:55–8:57:** 85 / 6 / 6 / 3. **8:57–8:59:** 70 / 13 / 10 / 7. **8:59–9:00:** the §2.5 table. Lobby mix unchanged. | New players were fired around 8:57 and never saw the final minute (sloppy bot: average round 135 s). The opening is now calm enough to learn the door, and the manager/intern conflict arrives in numbers with the crowd. All four types still appear from the start, and office workers are the most common in every part (AC #14, #15). |
+| **8:59 street interval** (`STREET_SPAWN_RAMP`, last entry) | 1.5 s | **1.2 s** | The final minute wasn't crowded (§1 asks for "crowded and slightly out of control by 8:59"): the street line averaged 2.3 people. **Changes AC #22**, which now reads "intervals of 4 s, 2.5 s, 1.2 s". |
+| **Lobby rush at 8:59** (`LOBBY_FINAL_MINUTE_SPAWN_INTERVAL`) | One every 10 s all round | One every 10 s until 8:59, then one every **6 s** | Pressure from both sides at the end, and gridlock becomes a real (rare) way to lose. AC #23's "about every 10 s" still holds for most of the round. |
+| **Rush: troublemaker cut-off** (`TROUBLEMAKER_LAST_SECONDS`) | Every ~15 s until the end | None arrive after about 8:59:20 (156 s) | With the busier 8:59, troublemakers in the last seconds dropped the careful bot to 40% in Rush. The cut-off keeps Rush a little harder than Classic. Rush is a v2 addition, so no AC is affected. |
+
+**Tuning goal** (session of 2026-10-30): "tense but fair". A skilled player usually makes it, but narrowly, and a new player reaches the 8:59 climax most of the time. Measured with `node tools/sim.js 500` (careful bot: perfect information, uses the gates; sloppy bot: slow reactions, never uses the gates):
+
+| | Before | After |
+|---|---|---|
+| Classic, careful: made it | 99% | **79%** (fired 19%, gridlock 1%) |
+| Classic, sloppy: reached 8:59 | 47% | **85%** (made it 10%) |
+| Classic, sloppy: average round | 135 s | **157 s** |
+| Classic, careful: street line during 8:59 | 2.3 people | **3.4** (longest line averages 6.3) |
+| Rush, careful: made it | 85% | **70%** |
+
+**Not reached:** a street line averaging 4–6 people during 8:59. Settings that got there (1.0–1.1 s intervals, more couriers) dropped the careful bot to 45–65%, because a skilled player clears the line quickly. 3.4 people with frequent peaks of 6–7 was the best balance. The numbers come from bots, so play-testing with people should have the final say.
 
 ---
 
 ## Additions (v2)
 
-*Added on top of the spec. Classic mode, the default when Space is pressed on the title screen, is still exactly the game described above and meets every acceptance criterion.*
+*Added on top of the spec. Classic mode, the default when Space is pressed on the title screen, is the game described above with the tuning changes in the previous section, and meets every acceptance criterion (AC #22 as amended there).*
 
 - **Rush mode** (R on the title screen). Classic plus *troublemakers*: someone who must not get in joins the street line about every 15 s from 0:20 (`TROUBLEMAKER_*` in `js/constants.js`). If ↓ is held while one is at the front of the line (and has finished walking up), they give up after 2.5 s and leave. If one steps into the door it counts as a strike, the same as a complaint. Any door speed suits them, so they never complain about speed, and they don't count as delivered. This gives the gates a second job and a new trade-off: holding ↓ keeps the troublemaker out but stalls everyone behind them.
 - **Tutorial** (T on the title screen). Seven guided steps in a practice round: no clock, no automatic arrivals, strikes don't count, the round never ends.

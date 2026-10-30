@@ -178,3 +178,14 @@ Mistakes caught along the way:
 - a scripted edit stopped halfway on a wrong anchor string, and was re-run
 - a new scenario name clashed with an existing one (`rush`), renamed `rushMode`
 - the owl receptionist was drawn on top of the human one
+
+## 13. Tuning for "tense but fair"
+
+**Prompts:**
+> ok, how would I improve the fun factor of this game. here is what the spec says — use extra time to tune the numbers so the round feels tense but fair.
+
+> do all 1-4, log as tuning changes
+
+**What happened:** Claude ran the sim first. The careful bot made it 99% of the time and the sloppy bot was fired at about 8:57, so the game was too easy for a skilled player and too harsh for a new one, and 8:59 wasn't crowded. It proposed four changes: a calmer opening (an arrival mix per part of the round), more couriers and conflict at 8:59, a lobby rush at 8:59, and 1.2 s at 8:59 (amending AC #22). It swept about 15 variants with a scratch script before picking one. The harder 8:59 dropped Rush to 40%, so troublemakers now stop arriving at about 8:59:20.
+
+Result: careful 79% in Classic and 70% in Rush. The sloppy bot reaches 8:59 in 85% of rounds, up from 47%. The 8:59 street line went from 2.3 to 3.4 people. The 4–6 target was missed; SPEC.md "Tuning changes" says why.

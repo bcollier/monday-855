@@ -53,8 +53,8 @@ Extra flags: `&critter` switches to the Critter look, `&hold` freezes the rules 
 | Key | Mode | What it is |
 |---|---|---|
 | **T** | Tutorial | Seven short steps, about a minute. No clock, no strikes. Esc leaves. |
-| **Space** | Classic | Exactly SPEC.md. This is the mode the acceptance criteria describe. |
-| **R** | Rush | Classic plus **troublemakers**: a pushy salesperson, a pickpocket and a kid who just wants to spin join the street line about every 15 s. Hold **↓** while one is at the front and after 2.5 s they give up. Let one in and it's a strike. |
+| **Space** | Classic | SPEC.md, with the numbers tuned as logged in its "Tuning changes" section. This is the mode the acceptance criteria describe. |
+| **R** | Rush | Classic plus **troublemakers**: a pushy salesperson, a pickpocket and a kid who just wants to spin join the street line about every 15 s (none after about 8:59:20). Hold **↓** while one is at the front and after 2.5 s they give up. Let one in and it's a strike. |
 
 **Critter look:** press **C** at any time to switch the whole cast and scenery to cozy animals: commuter bunnies, cats, bears, frogs and mice; a late fox; a coffee squirrel; a duck pushing a stroller of ducklings; a raccoon, a mole and a puppy as the troublemakers. It's only a different look: same rules, same comfort ranges, same criteria.
 
@@ -125,8 +125,8 @@ All 31 criteria in SPEC.md §3 are met in **Classic** mode (Space on the title s
 | 19 | Met | Seen. Speech bubble with a line per type and cause; a pink slip gets stamped. |
 | 20 | Met | Seen. Green ring, yellow draining ring. |
 | 21 | Met | Tested (180.00 s). A full round in the browser harness was 10,800 frames at 60 fps. |
-| 22 | Met | Tested, measured in a real round: 4.00 / 2.50 / 1.50 s. |
-| 23 | Met | Tested. One every 10 s, 70% workers / 30% couriers, they ride out to the street. |
+| 22 | Met (amended) | Tested, measured in a real round: 4.00 / 2.50 / 1.20 s. The 8:59 interval was tuned from 1.5 s to 1.2 s (SPEC.md, "Tuning changes"). |
+| 23 | Met | Tested. One every 10 s (every 6 s during 8:59, a tuning change), 70% workers / 30% couriers, they ride out to the street. |
 | 24 | Met | Tested/seen. |
 | 25 | Met | Tested. Holding ↓ from the start gridlocks at about 32 s. |
 | 26 | Met | Tested/seen. All end screens show delivered and complaints; R restarts. |
@@ -208,7 +208,7 @@ main.js runFrame()
 | change door feel (push, friction, max) | `constants.js` |
 | change who may step in, and when | `Queue.update()`, `Door.canAccept()` |
 | change complaint rules | `Person.updateComfort()` |
-| change arrival rates | `STREET_SPAWN_RAMP`, `LOBBY_SPAWN_INTERVAL` in `constants.js` |
+| change arrival rates or the arrival mix | `STREET_SPAWN_RAMP` (intervals and `streetMix`), `LOBBY_SPAWN_INTERVAL`, `LOBBY_FINAL_MINUTE_SPAWN_INTERVAL` in `constants.js` |
 | change complaint lines | `complaintLines` in `PERSON_TYPES` |
 | change a tip | `HINTS` at the bottom of `fx.js` |
 | add a rare look | `RARE_LOOKS` in `surprises.js` + drawing in `render/characters.js` |
@@ -220,10 +220,16 @@ main.js runFrame()
 
 ## 5. Balance
 
-`node tools/sim.js` (200 rounds each, current numbers):
+`node tools/sim.js 500` (500 rounds each, current numbers):
 
-| Player | Made it | Notes |
-|---|---|---|
+| Player | Classic | Rush | Notes |
+|---|---|---|---|
+| Careful (sees everything, reacts every 0.25 s, uses the gates) | 79% made it | 70% | Usually makes it with a strike or two to spare. Losses come in the 8:59 crowd. |
+| Sloppy (reacts every 0.6 s, never uses the gates) | 10% made it, 85% reach 8:59 | 0% | Gets through the calm opening, then is fired in the rush. |
+
+The target was "tense but fair": a skilled player usually makes it, but narrowly, and a new player sees the 8:59 climax. The arrival mix starts calm and gets harder, 8:59 is busier on both sides, and the street line averages 3.4 people during 8:59 with peaks of 6–7. SPEC.md, "Tuning changes", has the numbers before and after, and what was tried. A human sits between the two bots. The careful bot has perfect information, so its numbers say little about how a person will do; play-testing should have the final say.
+
+---|---|---|
 | Careful (sees everything, reacts every 0.25 s, uses the gates) | ~98% | Delivers ~83 people. Complaints mostly managers kept too slow. |
 | Sloppy (reacts every 0.6 s, never uses the gates) | 5–10% | Fired, mostly couriers and interns hit by a fast door. |
 

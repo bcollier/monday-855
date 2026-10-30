@@ -188,9 +188,10 @@ class Game {
     this.secondsUntilLobbySpawn -= dt;
     if (this.secondsUntilLobbySpawn <= 0) {
       this.addToQueue('lobby', this.pickTypeKey('lobby'), ARRIVAL_WALK_SECONDS);
-      this.secondsUntilLobbySpawn += LOBBY_SPAWN_INTERVAL;
+      this.secondsUntilLobbySpawn += this.secondsElapsed >= FINAL_MINUTE_STARTS_AT ? LOBBY_FINAL_MINUTE_SPAWN_INTERVAL : LOBBY_SPAWN_INTERVAL;
     }
-    if (this.mode === 'rush') {
+    // No new troublemakers late in 8:59: the very end is about the crowd.
+    if (this.mode === 'rush' && this.secondsElapsed < TROUBLEMAKER_LAST_SECONDS) {
       this.secondsUntilTroublemaker -= dt;
       if (this.secondsUntilTroublemaker <= 0) {
         this.addToQueue('street', 'troublemaker', ARRIVAL_WALK_SECONDS);
@@ -201,7 +202,8 @@ class Game {
 
   /** Random passenger type for a side. Tests replace this to spawn one type only. */
   pickTypeKey(side) {
-    return pickPersonTypeKey(side, this.randomSource());
+    const mix = side === 'street' ? this.currentRampStep().streetMix : undefined;
+    return pickPersonTypeKey(side, this.randomSource(), mix);
   }
 
   /**
@@ -216,13 +218,18 @@ class Game {
     return person;
   }
 
-  /** Seconds between street arrivals right now: the ramp in SPEC 2.7. */
-  currentStreetSpawnInterval() {
-    let interval = STREET_SPAWN_RAMP[0].intervalSeconds;
+  /** The part of STREET_SPAWN_RAMP the round is in right now (SPEC 2.7). */
+  currentRampStep() {
+    let current = STREET_SPAWN_RAMP[0];
     for (const step of STREET_SPAWN_RAMP) {
-      if (this.secondsElapsed >= step.fromSecond) interval = step.intervalSeconds;
+      if (this.secondsElapsed >= step.fromSecond) current = step;
     }
-    return interval;
+    return current;
+  }
+
+  /** Seconds between street arrivals right now. */
+  currentStreetSpawnInterval() {
+    return this.currentRampStep().intervalSeconds;
   }
 
   moveExitingPeople(dt) {

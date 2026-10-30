@@ -12,9 +12,9 @@ const root = path.join(__dirname, '..');
 const ctx = vm.createContext({ Math, console });
 let code = '';
 for (const f of ['constants', 'door', 'person', 'queue', 'game']) code += fs.readFileSync(path.join(root, 'js', f + '.js'), 'utf8') + '\n';
-code += 'this.api = { Game, Door, Person, Queue, PERSON_TYPES, angleDistance, pickPersonTypeKey, sharedComfortRange };';
+code += 'this.api = { Game, Door, Person, Queue, PERSON_TYPES, angleDistance, pickPersonTypeKey, sharedComfortRange, FINAL_MINUTE_STARTS_AT };';
 vm.runInContext(code, ctx);
-const { Game, Door, Person, PERSON_TYPES, angleDistance, pickPersonTypeKey, sharedComfortRange } = ctx.api;
+const { Game, Door, Person, PERSON_TYPES, angleDistance, pickPersonTypeKey, sharedComfortRange, FINAL_MINUTE_STARTS_AT } = ctx.api;
 
 let failures = 0;
 function check(name, cond, extra = '') { console.log((cond ? 'PASS ' : 'FAIL ') + name + (extra ? '  [' + extra + ']' : '')); if (!cond) failures++; }
@@ -135,15 +135,28 @@ function clearQueues(g) { g.streetQueue.people.length = 0; g.lobbyQueue.people.l
   check('AC13 courier takes an empty compartment', g.door.compartments[1].length === 1 && g.door.compartments[1][0].typeKey === 'courier');
   check('AC13 nobody joins a courier', g.streetQueue.length === 1); }
 
-// AC22: street arrivals ramp up at 8:57 and 8:59
+// AC22: street arrivals ramp up at 8:57 and 8:59 (8:59 tuned from 1.5 s to 1.2 s, SPEC "Tuning changes")
 { const g = new Game(); const at = (s) => { g.secondsElapsed = s; return g.currentStreetSpawnInterval(); };
-  check('AC22 ramp 4 / 2.5 / 1.5 s', at(0) === 4 && at(71.9) === 4 && at(72) === 2.5 && at(143.9) === 2.5 && at(144) === 1.5 && at(179) === 1.5); }
+  check('AC22 ramp 4 / 2.5 / 1.2 s', at(0) === 4 && at(71.9) === 4 && at(72) === 2.5 && at(143.9) === 2.5 && at(144) === 1.2 && at(179) === 1.2); }
 { const g = new Game(); const spawnTimes = [];
   let t = 0; while (t < 179) { for (const e of g.takeEvents()) if (e.type === 'spawned' && e.person.fromSide === 'street') spawnTimes.push(t);
     clearQueues(g); g.update(DT, none); t += DT; }
   const gapsIn = (from, to) => { const ts = spawnTimes.filter((s) => s >= from && s < to); return (ts[ts.length - 1] - ts[0]) / (ts.length - 1); };
-  check('AC22 measured gaps in a real round', Math.abs(gapsIn(0, 72) - 4) < 0.05 && Math.abs(gapsIn(76, 144) - 2.5) < 0.05 && Math.abs(gapsIn(147, 179) - 1.5) < 0.05,
+  check('AC22 measured gaps in a real round', Math.abs(gapsIn(0, 72) - 4) < 0.05 && Math.abs(gapsIn(76, 144) - 2.5) < 0.05 && Math.abs(gapsIn(147, 179) - 1.2) < 0.05,
     [gapsIn(0, 72), gapsIn(76, 144), gapsIn(147, 179)].map((x) => x.toFixed(2)).join(' / ')); }
+
+// Tuning: the street mix starts calm and gets harder; office workers stay the most common (AC15)
+{ const g = new Game(); const mixAt = (seconds) => { g.secondsElapsed = seconds; const counts = {};
+    for (let k = 0; k < 2000; k++) { const key = g.pickTypeKey('street'); counts[key] = (counts[key] || 0) + 1; } return counts; };
+  const share = (c, key) => (c[key] || 0) / 2000;
+  const early = mixAt(10), middle = mixAt(100), final = mixAt(160);
+  check('tuning: fewer managers and interns at 8:55 than at 8:59', share(early, 'manager') + share(early, 'intern') < share(final, 'manager') + share(final, 'intern') - 0.15);
+  check('tuning: all four types still arrive at 8:55', ['officeWorker', 'manager', 'intern', 'courier'].every((k) => early[k] > 0), JSON.stringify(early));
+  check('tuning: office workers most common in every part', [early, middle, final].every((c) => ['manager', 'intern', 'courier'].every((k) => c.officeWorker > (c[k] || 0)))); }
+{ const g = gameWithOnly('officeWorker'); g.secondsElapsed = FINAL_MINUTE_STARTS_AT; g.secondsUntilLobbySpawn = 0; let lobbySpawns = 0;
+  for (let t = 0; t < 30; t += DT) { for (const e of g.takeEvents()) if (e.type === 'spawned' && e.person.fromSide === 'lobby') lobbySpawns++;
+    clearQueues(g); g.update(DT, none); }
+  check('tuning: lobby arrivals every 6 s during 8:59', lobbySpawns === 5, 'spawns ' + lobbySpawns); }
 
 // AC23: lobby arrivals every 10 s, only office workers and couriers, and they ride out to the street
 { const g = new Game(); let lobbySpawns = 0;
