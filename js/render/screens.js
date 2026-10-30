@@ -158,10 +158,12 @@ function drawEndScreen(ctx, game, fx) {
   ctx.fillRect(x, y, width, 10);
   ctx.restore();
 
+  drawEndBadge(ctx, game.endReason, CANVAS_WIDTH / 2, y, screen.color, age);
+
   // Title, stamped
   const stamp = easeOutCubic((age - 0.35) / 0.25);
   ctx.save();
-  ctx.translate(CANVAS_WIDTH / 2, y + 64);
+  ctx.translate(CANVAS_WIDTH / 2, y + 72);
   ctx.rotate(-0.03);
   ctx.scale(lerp(1.8, 1, stamp), lerp(1.8, 1, stamp));
   ctx.globalAlpha = clamp(stamp * 1.4, 0, 1);
@@ -176,7 +178,7 @@ function drawEndScreen(ctx, game, fx) {
   ctx.font = font(15, '500');
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(screen.quip, CANVAS_WIDTH / 2, y + 110);
+  ctx.fillText(screen.quip, CANVAS_WIDTH / 2, y + 114);
 
   // The two numbers the spec asks for: delivered and complaints
   const statY = y + 146;
@@ -231,4 +233,45 @@ function reportCardRows(game) {
     ['Longest stretch without a complaint', `${Math.round(stats.longestCalmSeconds)} s`],
     ['Who you upset most', worst ? `${worst[1]} ${names[worst[0]]}${worst[1] === 1 ? '' : 's'}` : 'nobody (suspicious)'],
   ];
+}
+
+/** Round badge sitting on the top edge of the end card: pink slip, crowd, or a clock at 9:00. */
+function drawEndBadge(ctx, reason, x, y, color, age) {
+  const pop = easeOutBack((age - 0.5) / 0.3);
+  if (pop <= 0) return;
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(pop, pop);
+  fillCircle(ctx, 3, 3, 30, 'rgba(20, 16, 10, 0.22)');
+  fillCircle(ctx, 0, 0, 30, color);
+  fillCircle(ctx, 0, 0, 25, 'rgba(255, 255, 255, 0.15)');
+  if (reason === 'fired') {
+    ctx.rotate(-0.15);
+    fillRoundRect(ctx, -11, -14, 22, 28, 2, PALETTE.pinkSlip);
+    ctx.fillStyle = 'rgba(31, 36, 48, 0.3)';
+    for (let line = 0; line < 4; line++) ctx.fillRect(-7, -9 + line * 5, line === 3 ? 8 : 14, 1.3);
+    ctx.strokeStyle = PALETTE.danger;
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(-6, -6); ctx.lineTo(6, 6);
+    ctx.moveTo(6, -6); ctx.lineTo(-6, 6);
+    ctx.stroke();
+  } else if (reason === 'gridlock') {
+    for (const [hx, hy] of [[-12, 4], [0, 6], [12, 4], [-6, -7], [6, -7]]) {
+      fillEllipse(ctx, hx, hy + 3, 6.5, 4.5, 0, '#ffffff');
+      fillCircle(ctx, hx, hy, 4, '#3b2a22');
+    }
+  } else {
+    fillCircle(ctx, 0, 0, 17, '#ffffff');
+    ctx.strokeStyle = PALETTE.ink;
+    ctx.lineWidth = 2.6;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(0, 0); ctx.lineTo(0, -12);     // minute hand at 12
+    ctx.moveTo(0, 0); ctx.lineTo(-7.5, 0);    // hour hand at 9
+    ctx.stroke();
+    fillCircle(ctx, 0, 0, 2, PALETTE.ink);
+  }
+  ctx.restore();
 }
