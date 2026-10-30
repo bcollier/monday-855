@@ -452,8 +452,9 @@ function drawGateBarrier(ctx, side, amount) {
   ctx.stroke();
   ctx.setLineDash([]);
 
-  // Sign on a post beside the lane (to the left, away from the line's turn)
-  const signX = front.x - halfWidth - 44;
+  // Sign on a post beside the lane: right of the street line (the tip card sits to
+  // its left), left of the lobby line (the exit path runs to its right)
+  const signX = side === 'street' ? front.x + halfWidth + 44 : front.x - halfWidth - 44;
   const signY = y + outward * 4;
   ctx.save();
   ctx.translate(signX, signY);

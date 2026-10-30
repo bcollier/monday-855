@@ -79,6 +79,8 @@ function drawHead(ctx, look, hairStyle) {
 }
 
 function drawOfficeWorker(ctx, look, pose) {
+  const rare = look.rare?.key;
+  if (rare === 'dino') return drawDinoWorker(ctx, look, pose);
   const shirt = WORKER_SHIRTS[look.shirtIndex % WORKER_SHIRTS.length];
   if (look.hasBag) fillRoundRect(ctx, -9, 8, 11, 7, 2, '#6b4a33');
   fillEllipse(ctx, 0, 0, 7.5, 12, 0, shirt);
@@ -90,6 +92,20 @@ function drawOfficeWorker(ctx, look, pose) {
   ctx.lineTo(7, 0);
   ctx.lineTo(3, 3.5);
   ctx.stroke();
+  if (rare === 'cake' || rare === 'plant') {
+    // Both hands out front, carrying something precious
+    fillCircle(ctx, 9, -7, 2.6, look.skin);
+    fillCircle(ctx, 9, 7, 2.6, look.skin);
+    if (rare === 'cake') {
+      drawHead(ctx, look, 'short');
+      drawBirthdayCake(ctx, 16, 0, pose.time ?? 0);
+    } else {
+      fillCircle(ctx, 13, 0, 5.5, '#b86a45');
+      drawHead(ctx, look, 'short');
+      drawFicusLeaves(ctx, 14, 0, pose.time ?? 0);
+    }
+    return;
+  }
   // Hands: one holding a phone out in front
   fillCircle(ctx, 2, -11, 2.6, look.skin);
   fillCircle(ctx, 9, 6, 2.6, look.skin);
@@ -98,11 +114,81 @@ function drawOfficeWorker(ctx, look, pose) {
   drawHead(ctx, look, look.shirtIndex % 2 ? 'bun' : 'short');
 }
 
+/** Rare: an office worker who came to work in a dinosaur onesie. Still has their phone. */
+function drawDinoWorker(ctx, look, pose) {
+  const green = '#6bb35e';
+  const wag = Math.sin((pose.walkPhase ?? 0) * 1.2) * 2.5;
+  ctx.fillStyle = green;
+  ctx.beginPath();
+  ctx.moveTo(-5, -4.5);
+  ctx.lineTo(-22, wag);
+  ctx.lineTo(-5, 4.5);
+  ctx.closePath();
+  ctx.fill();
+  fillEllipse(ctx, 0, 0, 8, 12.5, 0, green);
+  for (let k = 0; k < 5; k++) {
+    const x = -18 + k * 4.2;
+    ctx.fillStyle = '#f2c230';
+    ctx.beginPath();
+    ctx.moveTo(x - 1.8, wag * (1 - k / 5) * 0.6);
+    ctx.lineTo(x, -2.2);
+    ctx.lineTo(x + 1.8, 0);
+    ctx.lineTo(x, 2.2);
+    ctx.closePath();
+    ctx.fill();
+  }
+  fillCircle(ctx, 2, -11, 2.8, green);
+  fillCircle(ctx, 9, 6, 2.8, green);
+  fillRoundRect(ctx, 9.5, 3.5, 6, 4.5, 1, '#1f2430');
+  // Hood with eyes and felt teeth
+  fillCircle(ctx, 0.5, 0, 6.8, green);
+  for (const side of [-1, 1]) {
+    fillCircle(ctx, 4, side * 3, 1.9, '#ffffff');
+    fillCircle(ctx, 4.6, side * 3, 0.9, '#1f2430');
+  }
+  ctx.fillStyle = '#ffffff';
+  for (const y of [-2.5, 0, 2.5]) {
+    ctx.beginPath();
+    ctx.moveTo(6.6, y - 1.1);
+    ctx.lineTo(8, y);
+    ctx.lineTo(6.6, y + 1.1);
+    ctx.closePath();
+    ctx.fill();
+  }
+}
+
+function drawBirthdayCake(ctx, x, y, time) {
+  fillCircle(ctx, x, y, 8.5, '#ffffff');
+  fillCircle(ctx, x, y, 7, '#f4a7c0');
+  for (let k = 0; k < 8; k++) {
+    const a = (k / 8) * Math.PI * 2;
+    fillCircle(ctx, x + Math.cos(a) * 5.6, y + Math.sin(a) * 5.6, 1.2, '#fff4f8');
+  }
+  for (const [cx, cy] of [[-2, -2.5], [2.5, 0], [-2, 2.5]]) {
+    fillCircle(ctx, x + cx, y + cy, 1, '#5b8de0');
+    const flicker = 1 + Math.sin(time * 30 + cx) * 0.25;
+    fillCircle(ctx, x + cx, y + cy, 1.5 * flicker, 'rgba(255, 196, 64, 0.85)');
+  }
+}
+
+function drawFicusLeaves(ctx, x, y, time) {
+  const sway = Math.sin(time * 3) * 0.08;
+  for (let k = 0; k < 9; k++) {
+    const a = (k / 9) * Math.PI * 2 + sway;
+    fillEllipse(ctx, x + Math.cos(a) * 9, y + Math.sin(a) * 9, 8, 3.4, a, k % 2 ? PALETTE.leaf : PALETTE.leafDark);
+  }
+  for (let k = 0; k < 5; k++) {
+    const a = (k / 5) * Math.PI * 2 + 0.3 - sway;
+    fillEllipse(ctx, x + Math.cos(a) * 4.5, y + Math.sin(a) * 4.5, 5, 2.2, a, PALETTE.leafLight);
+  }
+}
+
 function drawManager(ctx, look, pose) {
-  // Briefcase at their side
-  fillRoundRect(ctx, -6, 11.5, 14, 6, 1.5, '#5a3a22');
-  fillRoundRect(ctx, -1, 10.5, 4, 2, 1, PALETTE.brass);
-  fillEllipse(ctx, 0, 0, 8, 12.5, 0, MANAGER_SUIT);
+  const isCeo = look.rare?.key === 'ceo';
+  // Briefcase at their side (gold, if you're the CEO)
+  fillRoundRect(ctx, -6, 11.5, 14, 6, 1.5, isCeo ? PALETTE.brass : '#5a3a22');
+  fillRoundRect(ctx, -1, 10.5, 4, 2, 1, isCeo ? PALETTE.brassLight : PALETTE.brass);
+  fillEllipse(ctx, 0, 0, 8, 12.5, 0, isCeo ? '#15171d' : MANAGER_SUIT);
   // Shirt V, lapels and red tie
   ctx.fillStyle = '#f4f1ea';
   ctx.beginPath();
@@ -111,7 +197,7 @@ function drawManager(ctx, look, pose) {
   ctx.lineTo(4, 3.5);
   ctx.closePath();
   ctx.fill();
-  ctx.fillStyle = '#d43d3d';
+  ctx.fillStyle = isCeo ? '#e6b84a' : '#d43d3d';
   ctx.beginPath();
   ctx.moveTo(5.2, -1.3);
   ctx.lineTo(8.6, 0);
@@ -129,7 +215,14 @@ function drawManager(ctx, look, pose) {
     fillCircle(ctx, 1, -11.5, 2.7, look.skin);
     fillCircle(ctx, 1, 11.5, 2.7, look.skin);
   }
-  drawHead(ctx, { ...look, hair: look.hair === '#c79a5b' ? '#2b2420' : look.hair }, 'slick');
+  drawHead(ctx, { ...look, hair: isCeo ? '#d8d8d8' : look.hair === '#c79a5b' ? '#2b2420' : look.hair }, 'slick');
+  if (isCeo) {
+    // Sunglasses. Indoors. On a Monday.
+    fillRoundRect(ctx, 3.6, -5.2, 3.4, 4.4, 1.4, '#0e0f12');
+    fillRoundRect(ctx, 3.6, 0.8, 3.4, 4.4, 1.4, '#0e0f12');
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.fillRect(4.4, -4.4, 0.8, 1.6);
+  }
 }
 
 function drawIntern(ctx, look, pose) {
@@ -145,17 +238,25 @@ function drawIntern(ctx, look, pose) {
   fillCircle(ctx, 10, -9, 2.4, look.skin);
   fillCircle(ctx, 10, 9, 2.4, look.skin);
 
-  // The tray of six coffees. The cups wobble harder as the door nears 60 °/s.
+  // The tray of six coffees (twelve, on two trays, for the rare overachiever).
+  // The cups wobble harder as the door nears 60 °/s.
   const wobble = pose.wobble ?? 0;
   const time = pose.time ?? 0;
-  fillRoundRect(ctx, 9, -10.5, 15, 21, 3, '#d6bf93');
-  roundRectPath(ctx, 9, -10.5, 15, 21, 3);
+  const isTwelve = look.rare?.key === 'twelve';
+  const halfHeight = isTwelve ? 20.5 : 10.5;
+  const rows = isTwelve ? [-16.5, -10.3, -4.1, 4.1, 10.3, 16.5] : [-6.2, 0, 6.2];
+  if (isTwelve) {
+    fillCircle(ctx, 10, -15, 2.4, look.skin);
+    fillCircle(ctx, 10, 15, 2.4, look.skin);
+  }
+  fillRoundRect(ctx, 9, -halfHeight, 15, halfHeight * 2, 3, '#d6bf93');
+  roundRectPath(ctx, 9, -halfHeight, 15, halfHeight * 2, 3);
   ctx.strokeStyle = '#b39a6a';
   ctx.lineWidth = 1;
   ctx.stroke();
   let cup = 0;
   for (const cupX of [13, 20]) {
-    for (const cupY of [-6.2, 0, 6.2]) {
+    for (const cupY of rows) {
       const jitterX = Math.sin(time * 31 + cup * 1.9) * wobble * 1.4;
       const jitterY = Math.cos(time * 27 + cup * 2.3) * wobble * 1.4;
       fillCircle(ctx, cupX + jitterX, cupY + jitterY, 3.1, '#fffaf0');
@@ -180,6 +281,7 @@ function drawCourier(ctx, look, pose) {
   });
   // Top box on the stack
   fillRoundRect(ctx, 15.5, -5 + slide * 1.4, 8, 9, 1.5, '#d9aa6c');
+  if (look.rare?.key === 'cat') drawCartCat(ctx, 20, slide * 1.4, pose.time ?? 0);
   // Handle bar and hands
   ctx.strokeStyle = '#3d4250';
   ctx.lineWidth = 2.5;
@@ -203,6 +305,36 @@ function drawCourier(ctx, look, pose) {
     ctx.stroke();
   }
   fillEllipse(ctx, 5.4, 0, 1.8, 4.2, 0, '#2a2a30');
+}
+
+/** Rare: a ginger cat riding on top of the courier's boxes, tail swishing. */
+function drawCartCat(ctx, x, y, time) {
+  ctx.strokeStyle = '#d9822b';
+  ctx.lineWidth = 2.2;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(x - 4, y);
+  ctx.quadraticCurveTo(x - 9, y + Math.sin(time * 4) * 6, x - 6, y + 6 + Math.sin(time * 4) * 2);
+  ctx.stroke();
+  fillEllipse(ctx, x, y, 5.5, 4.6, 0, '#e8933a');
+  ctx.strokeStyle = '#b8641c';
+  ctx.lineWidth = 1;
+  for (const sx of [-2, 0.5]) {
+    ctx.beginPath();
+    ctx.moveTo(x + sx, y - 3.5);
+    ctx.lineTo(x + sx, y + 3.5);
+    ctx.stroke();
+  }
+  fillCircle(ctx, x + 5, y, 3.4, '#e8933a');
+  for (const side of [-1, 1]) {
+    ctx.fillStyle = '#e8933a';
+    ctx.beginPath();
+    ctx.moveTo(x + 4, y + side * 1.5);
+    ctx.lineTo(x + 6.5, y + side * 4.4);
+    ctx.lineTo(x + 7, y + side * 1);
+    ctx.closePath();
+    ctx.fill();
+  }
 }
 
 // ---- Mood and warning signs ----
@@ -306,6 +438,7 @@ function drawQueuedPeople(ctx, game, fx, ui) {
         walkPhase: visual.walkPhase,
         time: fx.time,
         isPhoneLit: true,
+        scale: celebrationScale(fx, visual, person.id),
       });
       if (ui.showDebug) drawLabelBadge(ctx, visual.x, visual.y, person);
     }
@@ -327,6 +460,7 @@ function drawRiders(ctx, game, fx, ui) {
       wobble: riderWobble(person, speed),
       isTapping: person.mood === 'impatient',
       isPhoneLit: false,
+      scale: celebrationScale(fx, visual, person.id),
     });
     if (ui.showDebug) drawLabelBadge(ctx, visual.x, visual.y, person);
   }
@@ -345,6 +479,7 @@ function drawWalkers(ctx, fx, ui) {
       isWalking: true,
       walkPhase: visual.walkPhase,
       time: fx.time,
+      scale: celebrationScale(fx, visual, walker.person.id),
     });
     if (ui.showDebug) drawLabelBadge(ctx, visual.x, visual.y, walker.person);
   }
@@ -372,7 +507,18 @@ function drawAmbientPeople(ctx, fx) {
       walkPhase: walker.walkPhase,
       time: fx.time,
     });
-    if (walker.hasUmbrella) drawUmbrella(ctx, walker.x + 2, walker.y - 2, walker.umbrellaColor);
+    if (walker.hasDog) {
+      const dogX = walker.x + walker.direction * 24;
+      ctx.strokeStyle = 'rgba(31, 36, 48, 0.6)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(walker.x + walker.direction * 8, walker.y + 5);
+      ctx.quadraticCurveTo(walker.x + walker.direction * 16, walker.y + 10, dogX - walker.direction * 8, walker.y + 4);
+      ctx.stroke();
+      drawDog(ctx, dogX, walker.y + 4, facing, walker.walkPhase);
+    }
+    const isRaining = fx.weather.rain > 0.35;
+    if (walker.hasUmbrella || (isRaining && walker.opensUmbrellaInRain)) drawUmbrella(ctx, walker.x + 2, walker.y - 2, walker.umbrellaColor);
   }
 }
 

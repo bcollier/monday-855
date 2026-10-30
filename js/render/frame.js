@@ -21,15 +21,22 @@ function drawGame(ctx, game, fx, ui, pixelRatio) {
   const isTitle = game.phase === 'title';
   if (!isTitle) drawAlignedCompartmentGlow(ctx, game.door, fx.time);
   drawQueuedPeople(ctx, game, fx, ui);
-  drawDoorWings(ctx, isTitle ? fx.titleDoorAngle : game.door.angle, isTitle ? 24 : game.door.speed);
+  const mood = doorMood(game, fx);
+  drawDoorWings(ctx, isTitle ? fx.titleDoorAngle : game.door.angle, isTitle ? 24 : game.door.speed, mood, fx.time);
   drawRiders(ctx, game, fx, ui);
+  if (fx.pigeon.state === 'riding') drawPigeon(ctx, fx.pigeon, fx.time);
+  drawDoorMoodGlow(ctx, mood, fx.time);
   drawDoorHousing(ctx, fx.time);
   drawWalkers(ctx, fx, ui);
+  drawRain(ctx, fx);
   drawGateBarrier(ctx, 'street', fx.gateAmount.street);
   drawGateBarrier(ctx, 'lobby', fx.gateAmount.lobby);
   drawParticles(ctx, fx);
+  if (fx.pigeon.state !== 'riding') drawPigeon(ctx, fx.pigeon, fx.time);
   drawPeopleOverlays(ctx, game, fx);
   drawSpeechBubbles(ctx, fx);
+  drawFloaters(ctx, fx);
+  drawStreakCallout(ctx, fx);
   ctx.restore();
 
   drawFinalMinuteVignette(ctx, game, fx);
@@ -38,6 +45,8 @@ function drawGame(ctx, game, fx, ui, pixelRatio) {
   if (!isTitle) {
     drawHud(ctx, game, fx, ui);
     drawSpeedMeter(ctx, game, fx);
+    drawBanner(ctx, fx);
+    drawFinalCountdown(ctx, game);
   }
   if (ui.showDebug) drawDebugOverlay(ctx, game, ui);
 

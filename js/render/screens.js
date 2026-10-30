@@ -143,10 +143,11 @@ function drawEndScreen(ctx, game, fx) {
   ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
   ctx.restore();
 
+  const rows = endScreenRows(game, fx);
   const width = 540;
-  const height = 384;
+  const height = 350 + rows.length * 24;
   const x = (CANVAS_WIDTH - width) / 2;
-  const finalY = 118;
+  const finalY = Math.max(64, (CANVAS_HEIGHT - height) / 2 + 10);
   const y = lerp(-height - 20, finalY, easeOutBack(age / 0.55));
 
   ctx.save();
@@ -193,10 +194,35 @@ function drawEndScreen(ctx, game, fx) {
     ctx.fillText(value, boxX + 114, statY + 50);
   }
 
-  // Report card
-  const rows = reportCardRows(game);
+  // Rank, and how it compares with the best this session
+  const rankY = y + 248;
+  ctx.textAlign = 'center';
+  ctx.fillStyle = PALETTE.inkSoft;
+  ctx.font = font(9, 'bold', FONT_DISPLAY);
+  fillSpacedText(ctx, 'YOUR RANK', CANVAS_WIDTH / 2, rankY - 9, 2.5);
+  ctx.fillStyle = PALETTE.brassDark;
+  ctx.font = font(20, 'bold', FONT_DISPLAY);
+  fillSpacedText(ctx, doormanRank(game), CANVAS_WIDTH / 2, rankY + 11, 1.5);
+  if (fx.isNewBest) {
+    const wiggle = Math.sin(age * 8) * 0.06;
+    ctx.save();
+    ctx.translate(x + width - 54, rankY - 8);
+    ctx.rotate(0.12 + wiggle);
+    fillRoundRect(ctx, -38, -12, 76, 24, 12, PALETTE.safe);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = font(11, 'bold', FONT_DISPLAY);
+    fillSpacedText(ctx, 'NEW BEST!', 0, 1, 1.2);
+    ctx.restore();
+  } else if (fx.bestDelivered > game.deliveredCount) {
+    ctx.fillStyle = PALETTE.inkSoft;
+    ctx.font = font(11, '600');
+    ctx.textAlign = 'right';
+    ctx.fillText(`best today: ${fx.bestDelivered}`, x + width - 40, rankY + 12);
+  }
+
+  // Report card (or, when fired, what each strike was for)
   rows.forEach((row, i) => {
-    const rowY = y + 252 + i * 24;
+    const rowY = y + 296 + i * 24;
     ctx.fillStyle = PALETTE.inkSoft;
     ctx.font = font(13, '500');
     ctx.textAlign = 'left';
@@ -218,6 +244,21 @@ function drawEndScreen(ctx, game, fx) {
   ctx.textAlign = 'left';
   fillSpacedText(ctx, 'TO TRY AGAIN', CANVAS_WIDTH / 2 - 50, y + height - 34, 2);
   ctx.restore();
+}
+
+/** The rows under the rank: the strike log when fired, the report card otherwise, plus sightings. */
+function endScreenRows(game, fx) {
+  const rows = game.endReason === 'fired'
+    ? fx.complaintLog.slice(0, MAX_COMPLAINTS).map((entry, i) => {
+      const [who, what] = describeComplaint(entry);
+      return [`${i + 1}. ${who}`, what];
+    })
+    : reportCardRows(game);
+  if (fx.sightings.length) {
+    const names = [...new Set(fx.sightings)];
+    rows.push(['Spotted today', names.length > 2 ? `${names.slice(0, 2).join(', ')} +${names.length - 2}` : names.join(', ')]);
+  }
+  return rows;
 }
 
 /** Three funny-but-true lines about the round, from game.stats. */

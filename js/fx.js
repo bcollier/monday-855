@@ -28,6 +28,10 @@ class Fx {
     this.secondsUntilPedestrian = 0;
     this.secondsUntilCar = 0.5;
     this.titleDoorAngle = 18;
+    // Kept across rounds for this page load only (SPEC §5: nothing is saved).
+    this.bestDelivered = 0;
+    this.sightingsEver = new Set();
+    this.pigeon = createPigeon();
     this.resetRound();
   }
 
@@ -48,6 +52,16 @@ class Fx {
     this.clockFlip = { age: Infinity, fromText: '8:55' };
     this.lastClockText = '8:55';
     this.hint = null;
+    this.floaters = [];                // little words drifting up ("+1", "LATTES INTACT!")
+    this.banner = null;                // top-of-screen announcement (rare sighting, rain)
+    this.happyStreak = 0;              // happy deliveries since the last complaint
+    this.streakCallout = null;
+    this.complaintLog = [];            // for the strike log on the end screen
+    this.sightings = [];               // rare characters seen this round
+    this.lastComplaintAge = Infinity;
+    this.cheerAge = Infinity;          // everyone bounces when the clock hits 9:00
+    this.isNewBest = false;
+    this.weather = createWeather();
   }
 
   /** Per-person look and motion. Created the first time a person is seen. */
@@ -59,8 +73,10 @@ class Fx {
         x: DOOR_CENTER_X,
         y: DOOR_CENTER_Y,
         facing: 0,
-        look: makeLook(random),
+        look: { ...makeLook(random), rare: pickRareLook(person.typeKey, random) },
         walkPhase: random() * 10,
+        spinAge: Infinity,             // a rider who gets hit spins round once
+        hopAge: Infinity,              // a happy leaver hops
         isWalking: false,
         queueDistance: null,
         enterAge: Infinity,
@@ -107,6 +123,34 @@ class Fx {
     this.clockFlip.age += dt;
 
     this.updateHints(dt, game);
+    this.updateFlourishes(dt, game);
+  }
+
+  /** Floaters, banners, streak call-outs, the pigeon and the weather. */
+  updateFlourishes(dt, game) {
+    for (const floater of this.floaters) {
+      floater.age += dt;
+      floater.y -= 26 * dt;
+    }
+    this.floaters = this.floaters.filter((floater) => floater.age < floater.life);
+    if (this.banner && (this.banner.age += dt) > 3) this.banner = null;
+    if (this.streakCallout && (this.streakCallout.age += dt) > 1.8) this.streakCallout = null;
+    this.lastComplaintAge += dt;
+    this.cheerAge += dt;
+
+    const isTitle = game.phase === 'title';
+    const doorAngle = isTitle ? this.titleDoorAngle : game.door.angle;
+    const doorSpeed = isTitle ? 24 : game.door.speed;
+    updatePigeon(this, this.pigeon, dt, doorAngle, doorSpeed, isTitle || game.phase === 'playing');
+    updateWeather(this, this.weather, dt, game);
+  }
+
+  addFloater(text, x, y, options = {}) {
+    this.floaters.push({ text, x, y, age: 0, life: options.life ?? 1.2, color: options.color ?? PALETTE.safe, size: options.size ?? 12 });
+  }
+
+  showBanner(title, subtitle, color) {
+    this.banner = { title, subtitle, color, age: 0 };
   }
 
   handleEvent(event, game) {
@@ -124,6 +168,13 @@ class Fx {
         const start = pointOnQueuePath(event.person.fromSide, visual.queueDistance);
         visual.x = start.x;
         visual.y = start.y;
+        const rare = visual.look.rare;
+        if (rare) {
+          this.sightings.push(rare.name);
+          const isFirstEver = !this.sightingsEver.has(rare.key);
+          this.sightingsEver.add(rare.key);
+          this.showBanner(isFirstEver ? 'RARE SIGHTING!' : 'LOOK WHO IT IS', `Here comes ${rare.name}.`, PALETTE.brass);
+        }
         break;
       }
       case 'entered': {
@@ -143,14 +194,21 @@ class Fx {
           speed: EXIT_WALK_SPEED_FX * (event.person.typeKey === 'manager' ? 1.35 : 1),
         });
         this.deliveredBounce = 1;
+        if (!event.person.hasComplained) this.onHappyDelivery(event.person, visual);
         break;
       }
       case 'complained':
+        this.complaintLog.push({ typeKey: event.person.typeKey, reason: event.reason, speed: game.door.speed, rareName: this.visualOf(event.person).look.rare?.name });
         this.onComplaint(event.person, event.reason);
         break;
       case 'roundEnded':
         this.endScreenAge = 0;
-        if (event.reason === 'madeIt') this.burstConfetti();
+        this.isNewBest = game.deliveredCount > this.bestDelivered && this.bestDelivered > 0;
+        this.bestDelivered = Math.max(this.bestDelivered, game.deliveredCount);
+        if (event.reason === 'madeIt') {
+          this.burstConfetti();
+          this.cheerAge = 0;
+        }
         break;
     }
   }
@@ -214,6 +272,8 @@ class Fx {
         visual.enterAge += dt;
         // Riders face the way the door turns (counterclockwise = +90° from their angle).
         visual.facing = canvasRotationForGameAngle(centerAngle + 90);
+        if (visual.spinAge < 0.6) visual.facing += easeOutCubic(visual.spinAge / 0.6) * Math.PI * 2;
+        visual.spinAge += dt;
       });
     });
   }
@@ -241,16 +301,36 @@ class Fx {
       }
       visual.isWalking = true;
       visual.walkPhase += dt * 12;
+      visual.hopAge += dt;
     }
     this.walkers = this.walkers.filter((walker) => walker.segment < walker.path.length - 1);
+  }
+
+  // ---- Happy deliveries ----
+
+  onHappyDelivery(person, visual) {
+    visual.hopAge = 0;
+    this.happyStreak += 1;
+    this.addFloater('+1', visual.x, visual.y - 16, { color: PALETTE.safe, size: 15 });
+    for (let i = 0; i < 2; i++) this.addParticle('heart', visual.x, visual.y - 10, 30, { life: 1.1, size: 4 });
+    if (Math.random() < 0.3) {
+      const lines = HAPPY_LINES[person.typeKey];
+      this.addFloater(lines[Math.floor(Math.random() * lines.length)], visual.x, visual.y - 32, { color: PALETTE.inkSoft, size: 10, life: 1.4 });
+    }
+    const callout = streakCallout(this.happyStreak);
+    if (callout) this.streakCallout = { text: callout, streak: this.happyStreak, age: 0 };
   }
 
   // ---- Complaints ----
 
   onComplaint(person, reason) {
     const visual = this.visualOf(person);
-    const lines = person.type.complaintLines[reason] ?? person.type.complaintLines.tooFast;
+    const rareLines = visual.look.rare?.lines?.[reason];
+    const lines = rareLines ?? person.type.complaintLines[reason] ?? person.type.complaintLines.tooFast;
     this.bubbles.push({ person, visual, text: lines[Math.floor(Math.random() * lines.length)], age: 0 });
+    this.happyStreak = 0;
+    this.lastComplaintAge = 0;
+    if (reason === 'tooFast') visual.spinAge = 0;
 
     if (!this.reducedMotion) this.shake = Math.max(this.shake, reason === 'tooFast' ? 7 : 4);
     if (this.strikesStamped < 3) this.strikeStampAge[this.strikesStamped] = 0;
@@ -332,6 +412,7 @@ class Fx {
       particle.vy *= Math.exp(-drag * dt);
       if (particle.kind === 'confetti') particle.vy += 60 * dt;   // the one thing that "falls" in a top-down world
       if (particle.kind === 'puff') particle.vy -= 30 * dt;
+      if (particle.kind === 'feather') particle.rotation += Math.sin(particle.age * 6) * dt * 3;
       particle.rotation += particle.spin * dt * Math.exp(-particle.age * 2);
     }
     this.particles = this.particles.filter((particle) => particle.age < particle.life);
@@ -353,7 +434,9 @@ class Fx {
         speed: (isRush ? 75 : 48) + Math.random() * 30,
         look: makeLook(random),
         walkPhase: Math.random() * 10,
-        hasUmbrella: Math.random() < 0.18,
+        hasUmbrella: Math.random() < 0.12,
+        opensUmbrellaInRain: Math.random() < 0.75,
+        hasDog: Math.random() < 0.1,
         umbrellaColor: ['#2f4b8f', '#e2453c', '#1f2430', '#f2b51d', '#36b368'][Math.floor(Math.random() * 5)],
       });
       this.secondsUntilPedestrian = (isRush ? 0.55 : 2.1) * (0.6 + Math.random() * 0.8);
@@ -416,8 +499,18 @@ function makeLook(random) {
 const HINTS = [
   {
     key: 'push',
-    text: 'Hold [SPACE] to push the door. Let go and it coasts.',
+    text: 'Hold [SPACE] to push the door, let go to coast. Short pushes work best.',
     when: (game, fx) => fx.roundAge > 0.8 && game.door.speed < 5 && game.secondsElapsed < 30,
+  },
+  {
+    key: 'safe',
+    text: 'Someone stepped in! Keep the needle inside the green SAFE ZONE.',
+    when: (game) => game.door.allRiders().length > 0,
+  },
+  {
+    key: 'fast',
+    text: 'Easy! Go past their top speed and the wing smacks them. Let go of [SPACE].',
+    when: (game) => game.door.allRiders().some((rider) => !rider.hasComplained && game.door.speed > rider.type.comfortMaxSpeed - 12),
   },
   {
     key: 'conflict',

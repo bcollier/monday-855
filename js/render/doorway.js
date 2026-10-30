@@ -48,7 +48,7 @@ function drawAlignedCompartmentGlow(ctx, door, time) {
   }
 }
 
-function drawDoorWings(ctx, angle, speed) {
+function drawDoorWings(ctx, angle, speed, mood, time) {
   // Motion trails: ghost wings behind the real ones once the door is really moving.
   const trailStrength = clamp((speed - 100) / 100, 0, 1);
   if (trailStrength > 0) {
@@ -73,18 +73,121 @@ function drawDoorWings(ctx, angle, speed) {
   }
   for (let i = 0; i < WING_COUNT; i++) drawWing(ctx, angle + i * 90, false);
 
-  // Brass hub with a turning glint
-  fillCircle(ctx, DOOR_CENTER_X + 2, DOOR_CENTER_Y - 2, 13, PALETTE.shadow);
-  fillCircle(ctx, DOOR_CENTER_X, DOOR_CENTER_Y, 12, PALETTE.brassDark);
-  fillCircle(ctx, DOOR_CENTER_X, DOOR_CENTER_Y, 10, PALETTE.brass);
-  const glint = pointAroundDoor(angle + 135, 5);
-  fillCircle(ctx, glint.x, glint.y, 3, PALETTE.brassLight);
-  fillCircle(ctx, DOOR_CENTER_X, DOOR_CENTER_Y, 3, PALETTE.brassDark);
+  // Brass hub with a turning glint, and the door's face
+  fillCircle(ctx, DOOR_CENTER_X + 2, DOOR_CENTER_Y - 2, 18, PALETTE.shadow);
+  fillCircle(ctx, DOOR_CENTER_X, DOOR_CENTER_Y, 17, PALETTE.brassDark);
+  fillCircle(ctx, DOOR_CENTER_X, DOOR_CENTER_Y, 15, PALETTE.brass);
+  const glint = pointAroundDoor(angle + 135, 12.5);
+  fillCircle(ctx, glint.x, glint.y, 2, PALETTE.brassLight);
+  drawDoorFace(ctx, mood, time);
+}
+
+/**
+ * How the door "feels", from what's happening inside it. Shown as the hub's face
+ * and a glow around the rim, right where the player is already looking:
+ *   alarmed - someone is within 8 °/s of their top speed (a smack is coming)
+ *   worried - someone's too-slow timer is running
+ *   dizzy   - over 150 °/s
+ *   ouch    - a complaint just happened
+ *   happy / content / asleep otherwise
+ */
+function doorMood(game, fx) {
+  if (game.phase === 'title') return 'content';
+  if (fx.lastComplaintAge < 0.9) return 'ouch';
+  const speed = game.door.speed;
+  const riders = game.door.allRiders();
+  const calmRiders = riders.filter((rider) => !rider.hasComplained);
+  if (calmRiders.some((rider) => speed > rider.type.comfortMaxSpeed - 8)) return 'alarmed';
+  if (speed > 150) return 'dizzy';
+  if (calmRiders.some((rider) => rider.mood === 'impatient')) return 'worried';
+  if (speed < 1 && riders.length === 0) return 'asleep';
+  if (calmRiders.length > 0) return 'happy';
+  return 'content';
+}
+
+/** Colored halo around the door for the moods that need the player's attention. */
+function drawDoorMoodGlow(ctx, mood, time) {
+  const glow = { alarmed: [226, 69, 60, 0.55], ouch: [226, 69, 60, 0.4], worried: [242, 181, 29, 0.45], happy: [54, 179, 104, 0.22] }[mood];
+  if (!glow) return;
+  const pulse = mood === 'alarmed' ? 0.6 + 0.4 * Math.sin(time * 18) : mood === 'worried' ? 0.7 + 0.3 * Math.sin(time * 8) : 1;
+  ctx.save();
+  ctx.strokeStyle = `rgba(${glow[0]}, ${glow[1]}, ${glow[2]}, ${glow[3] * pulse})`;
+  ctx.lineWidth = 10;
+  ctx.beginPath();
+  ctx.arc(DOOR_CENTER_X, DOOR_CENTER_Y, DOOR_RADIUS + 18, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.lineWidth = 4;
+  ctx.globalAlpha = 0.5;
+  ctx.beginPath();
+  ctx.arc(DOOR_CENTER_X, DOOR_CENTER_Y, DOOR_RADIUS + 27, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.restore();
+}
+
+/** The hub's face. It stays upright while the door turns under it. */
+function drawDoorFace(ctx, mood, time) {
+  const ink = '#4a3412';
+  ctx.save();
+  ctx.translate(DOOR_CENTER_X, DOOR_CENTER_Y);
+  ctx.strokeStyle = ink;
+  ctx.fillStyle = ink;
+  ctx.lineWidth = 1.6;
+  ctx.lineCap = 'round';
+  const eye = (x, draw) => { ctx.save(); ctx.translate(x, -2.5); draw(); ctx.restore(); };
+  const stroke = (path) => { ctx.beginPath(); path(); ctx.stroke(); };
+
+  switch (mood) {
+    case 'asleep':
+      for (const x of [-5, 5]) eye(x, () => stroke(() => ctx.arc(0, -1, 2.4, 0.2, Math.PI - 0.2)));
+      stroke(() => ctx.arc(0, 5, 1.6, 0, Math.PI * 2));
+      // Little z's drifting off
+      ctx.font = font(9, 'bold', FONT_DISPLAY);
+      for (let k = 0; k < 2; k++) {
+        const t = (time * 0.5 + k / 2) % 1;
+        ctx.globalAlpha = 1 - t;
+        ctx.fillText('z', 10 + t * 10, -10 - t * 16);
+      }
+      break;
+    case 'happy':
+      for (const x of [-5, 5]) eye(x, () => stroke(() => ctx.arc(0, 1.5, 2.4, Math.PI + 0.3, -0.3)));
+      stroke(() => ctx.arc(0, 2.5, 5, 0.25, Math.PI - 0.25));
+      fillCircle(ctx, -9, 3, 2, 'rgba(226, 92, 138, 0.45)');
+      fillCircle(ctx, 9, 3, 2, 'rgba(226, 92, 138, 0.45)');
+      break;
+    case 'worried':
+      for (const x of [-5, 5]) eye(x, () => fillCircle(ctx, 0, 0, 1.8, ink));
+      stroke(() => { ctx.moveTo(-8, -7); ctx.lineTo(-3, -6); ctx.moveTo(8, -7); ctx.lineTo(3, -6); });
+      stroke(() => { ctx.moveTo(-4, 6); ctx.quadraticCurveTo(-2, 4, 0, 6); ctx.quadraticCurveTo(2, 8, 4, 6); });
+      break;
+    case 'alarmed': {
+      const shake = Math.sin(time * 40) * 0.6;
+      for (const x of [-5, 5]) eye(x + shake, () => { fillCircle(ctx, 0, 0, 3.6, '#ffffff'); fillCircle(ctx, 0, 0.5, 1.6, ink); });
+      fillEllipse(ctx, shake, 6.5, 2.4, 3, 0, ink);
+      break;
+    }
+    case 'dizzy':
+      for (const x of [-5, 5]) {
+        eye(x, () => {
+          ctx.rotate(time * 10);
+          stroke(() => { for (let a = 0; a < Math.PI * 4; a += 0.3) ctx.lineTo(Math.cos(a) * a * 0.28, Math.sin(a) * a * 0.28); });
+        });
+      }
+      stroke(() => { ctx.moveTo(-5, 6); for (let x = -5; x <= 5; x += 1) ctx.lineTo(x, 6 + Math.sin(x * 1.5 + time * 12)); });
+      break;
+    case 'ouch':
+      for (const x of [-5, 5]) eye(x, () => stroke(() => { ctx.moveTo(-2, -2); ctx.lineTo(2, 2); ctx.moveTo(2, -2); ctx.lineTo(-2, 2); }));
+      stroke(() => { ctx.moveTo(-5, 6); ctx.lineTo(-2, 4.5); ctx.lineTo(1, 6.5); ctx.lineTo(4, 4.5); ctx.lineTo(6, 6); });
+      break;
+    default:
+      for (const x of [-5, 5]) eye(x, () => fillCircle(ctx, 0, 0, 1.7, ink));
+      stroke(() => ctx.arc(0, 2.5, 3.6, 0.35, Math.PI - 0.35));
+  }
+  ctx.restore();
 }
 
 /** One glass wing: brass-edged glass panel with a push bar. */
 function drawWing(ctx, wingAngle, isGhost) {
-  const start = pointAroundDoor(wingAngle, 11);
+  const start = pointAroundDoor(wingAngle, 15);
   const tip = pointAroundDoor(wingAngle, DOOR_RADIUS - 3);
   ctx.lineCap = 'round';
   ctx.strokeStyle = isGhost ? PALETTE.glassEdge : '#3d4250';

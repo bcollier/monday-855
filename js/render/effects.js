@@ -60,6 +60,26 @@ function drawParticles(ctx, fx) {
         ctx.fillStyle = particle.color;
         ctx.fillRect(-size / 2, -size, size, size * 1.8);
         break;
+      case 'heart':
+        // Drifts upright, whatever its rotation
+        ctx.rotate(-particle.rotation);
+        ctx.translate(0, -particle.age * 18);
+        ctx.fillStyle = '#e25c8a';
+        ctx.beginPath();
+        ctx.moveTo(0, size * 0.9);
+        ctx.bezierCurveTo(-size * 1.6, -size * 0.2, -size * 0.6, -size * 1.4, 0, -size * 0.4);
+        ctx.bezierCurveTo(size * 0.6, -size * 1.4, size * 1.6, -size * 0.2, 0, size * 0.9);
+        ctx.fill();
+        break;
+      case 'feather':
+        fillEllipse(ctx, 0, 0, size * 1.4, size * 0.5, 0, '#c9cfd8');
+        ctx.strokeStyle = '#8e97a6';
+        ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        ctx.moveTo(-size * 1.4, 0);
+        ctx.lineTo(size * 1.4, 0);
+        ctx.stroke();
+        break;
     }
     ctx.restore();
   }
