@@ -1,5 +1,10 @@
 # Monday, 8:55 — The Dream Version: Build Plan
 
+> **Status (end of overnight build):** all 7 phases done on the `v2` branch. All 31 acceptance criteria met. See README.md §3 for how each was checked, and SPEC.md "Tuning changes" for the one rule addition (2 s arrival walk-up). Differences from this plan:
+> - Phases 2–5 were built together as one renderer, not one after another.
+> - The 8:59 arrival interval was left at the spec's 1.5 s, because AC #22 names that number.
+> - Sound was not added (§9, decision 1).
+
 Goal: take the Phase 1 prototype to a version that meets all 31 acceptance criteria in SPEC.md and looks and feels like a finished, polished indie game. Budget: about 10 hours of building, in 7 phases. Each phase ends with a commit and a playable game.
 
 ---

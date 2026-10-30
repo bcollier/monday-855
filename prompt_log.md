@@ -89,3 +89,39 @@ Two options were offered: (A) only document it, or (B) add the office worker now
 - **Another test mistake, fixed:** the first version of the "all types spawn" check watched one random round, and in one run no intern happened to appear. It now samples the type picker 1000 times, so it no longer depends on luck.
 
 ---
+---
+
+# Prompt log (v2, the "dream version")
+
+## Tools
+
+- **Claude Code** (Anthropic), model Claude Opus 5.5, in VS Code.
+
+## 8. Inheriting the project
+
+**Prompt:**
+> create a clone of this https://github.com/zhangyubooo/monday-855 locally, and commit it to my own public repo as initial commit. […] Explain how the code is structured, what works, and which acceptance criteria look closest to done. Don't change anything yet.
+
+**What happened:** The repo was cloned and re-committed as one initial commit (crediting the original author) to a new public repo. Claude read every file and summarized the structure and criteria status. It found one problem the README missed: several tests used a random source of `() => 0.99`, which only picked the intern because it was last in `PERSON_TYPES`. Adding the courier would have quietly turned them into courier tests.
+
+## 9. Planning
+
+**Prompt:**
+> build a plan to create a very high end version of what the spec is asking for. I want it to be beautiful, fun, etc. the dream version if it takes 10 hours of building that is fine
+
+**What happened:** Claude wrote PLAN.md: stay inside the spec's constraints (no libraries, no assets, no sound), add no new mechanics, and get spec-complete before polishing. Sound was flagged as a decision for the owner; the default was to keep the spec's "no sound".
+
+## 10. Building it overnight
+
+**Prompt:**
+> i'm signing off for the night, can I set a goal for you to just go through all 7 phases overnight?
+
+**What happened:** Claude worked through PLAN.md on a `v2` branch, committing after each phase. Highlights and mistakes:
+
+- **Rules first.** Courier, arrival ramp, lobby arrivals, title/pause phases and rule events were added. The fragile tests were rewritten to use `gameWithOnly(type)`, and 24 checks were added (55 in total).
+- **Visual layer.** The renderer was rewritten as `js/render/*` plus `fx.js`, driven by rule events, with every acceptance criterion's visuals done properly rather than as placeholders.
+- **Checking without a human.** Headless Chrome screenshots showed the rules never advancing. Headless Chrome barely runs `requestAnimationFrame` under virtual time. Claude added `#scenario=` URLs with `&advance=` (fast-forward) and `&bot` (an autopilot player). It also wrote a scratch harness that sends real key events and steps frames by hand. The first version of that harness hung, because every manual frame also queued its own animation loop; stubbing `requestAnimationFrame` fixed it.
+- **A bug that only appeared when the game was played.** `let` variables in `main.js` were declared after the scenario code that used them. It was caught on the first fast-forward run.
+- **Balance.** The first sim run had both bots fired in every round. Logging each complaint showed a real design hole: arrivals stepped into a fast door on the same frame they appeared, giving the player no time to react. The fix was a 2 s walk-up, recorded in SPEC.md "Tuning changes". The bot was also made smarter (plan for the next person, keep margins). Final result: careful bot 98%, sloppy bot 5–10%.
+- **A tuning decision deferred to the spec owner.** A 1.2 s final-minute arrival interval made the 8:59 crowd feel better. AC #22 names 1.5 s, so it was documented, not changed.
+- **Firefox.** A headless Firefox screenshot came out blank, and then garbled. Copying the canvas into an image showed it renders correctly; the problem was how headless Firefox captures canvases. Safari was not checked.

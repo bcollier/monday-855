@@ -199,3 +199,16 @@ Not part of this game, even if there's time left: sound and music, multiple leve
 - Plain **HTML + CSS + JavaScript** with one `<canvas>`. No frameworks, no build step, no external libraries, no image assets.
 - Must run by opening `index.html` directly in a browser (or with `python3 -m http.server`).
 - The canvas is a fixed 960 × 640; window resizing does not need to be handled.
+
+---
+
+## Tuning changes (v2)
+
+*Added during the v2 build. The original text above is unchanged; this section records where the game now differs from it, and why.*
+
+| Change | Was | Now | Why |
+|---|---|---|---|
+| **Arrival walk-up** (new rule, `ARRIVAL_WALK_SECONDS`) | A new arrival could step in on the same frame they appeared | A new arrival takes **2 s** to walk up before they can step in. They count toward the gridlock limit straight away. | Someone arriving while a compartment was lined up stepped straight into a fast door with no chance to react. That caused most complaints in simulated play (a "careful" bot survived 3% of rounds). With the walk-up, the speed meter's NEXT preview gives the player time to slow down or hold the gate. Fits §2.3: "people arrive and line up". |
+| Queue layout | Straight lines out of each opening | Each line runs 3 spots straight out, then turns (street to the right, lobby to the left) | Makes room for the speed meter (bottom) and the clock (top) without covering a queue. Visual only. |
+
+**Considered, not changed:** the 8:59 arrival interval. With 1.5 s, the street line averages about 2.4 people during 8:59 for a careful bot, which is less crowded than §1 describes. With **1.2 s** it averages about 3.3, with a careful-bot survival rate around 80%. AC #22 names 1.5 s, so it stays at 1.5 s until the spec owner decides. To try it, change the last entry of `STREET_SPAWN_RAMP` in `js/constants.js` and run `node tools/sim.js`.
