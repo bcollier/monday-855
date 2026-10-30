@@ -12,9 +12,23 @@
 // start animations. The rules never wait on, or read back from, the visuals.
 
 class Game {
-  /** @param {() => number} randomSource  defaults to Math.random; pass a seeded one in tests */
-  constructor(randomSource = Math.random) {
+  /**
+   * @param {() => number} randomSource  defaults to Math.random; pass a seeded one in tests
+   * @param {'classic'|'rush'|'tutorial'} mode
+   *   classic  - exactly SPEC.md
+   *   rush     - classic plus troublemakers (SPEC.md "Additions")
+   *   tutorial - practice: no clock, no automatic arrivals, strikes don't count,
+   *              the round never ends. tutorial.js decides who arrives.
+   */
+  constructor(randomSource = Math.random, mode = 'classic') {
     this.randomSource = randomSource;
+    this.mode = mode;
+    this.reset();
+  }
+
+  /** Starts a fresh round in the given mode (title screen choices). */
+  startMode(mode) {
+    this.mode = mode;
     this.reset();
   }
 
@@ -30,6 +44,7 @@ class Game {
     // Starting the countdown at 0 makes the first person appear on the first frame.
     this.secondsUntilStreetSpawn = 0;
     this.secondsUntilLobbySpawn = LOBBY_FIRST_SPAWN_SECONDS;
+    this.secondsUntilTroublemaker = TROUBLEMAKER_FIRST_SECONDS;
     this.phase = 'playing';         // 'title' | 'playing' | 'paused' | 'ended'
     this.endReason = null;          // 'fired' | 'gridlock' | 'madeIt' once the round ends
     this.events = [];
@@ -39,6 +54,8 @@ class Game {
       complaintsByType: {},
       secondsSinceComplaint: 0,
       longestCalmSeconds: 0,
+      keptOut: 0,      // troublemakers turned away (Rush)
+      breaches: 0,     // troublemakers who got in (Rush)
     };
     this.emit({ type: 'roundStarted' });
   }
@@ -76,17 +93,19 @@ class Game {
    */
   update(dt, controls) {
     if (this.phase !== 'playing') return;
+    const isPractice = this.mode === 'tutorial';
 
-    this.secondsElapsed = Math.min(ROUND_DURATION_SECONDS, this.secondsElapsed + dt);
+    if (!isPractice) this.secondsElapsed = Math.min(ROUND_DURATION_SECONDS, this.secondsElapsed + dt);
     this.door.update(dt, controls.isPushingDoor);
 
     this.letRidersExit();
     this.letQueueEnter(this.streetQueue, dt, controls.isStreetGateHeld);
     this.letQueueEnter(this.lobbyQueue, dt, controls.isLobbyGateHeld);
+    if (this.mode !== 'classic') this.updateTroublemakers(dt, controls);
     this.updateRiderComfort(dt);
-    this.spawnPeople(dt);
+    if (!isPractice) this.spawnPeople(dt);
     this.moveExitingPeople(dt);
-    this.checkForEndOfRound();
+    if (!isPractice) this.checkForEndOfRound();
   }
 
   /** Riders whose compartment reached the opposite opening step out and count as delivered. */
@@ -105,8 +124,10 @@ class Game {
         rider.x = DOOR_CENTER_X + EXIT_LANE_OFFSET_X;
         rider.y = DOOR_CENTER_Y + direction * DOOR_RADIUS;
         this.exitingPeople.push(rider);
-        this.deliveredCount += 1;
-        this.stats.deliveredByType[rider.typeKey] = (this.stats.deliveredByType[rider.typeKey] || 0) + 1;
+        if (!rider.type.isTroublemaker) {   // a troublemaker reaching the lobby is not a delivery
+          this.deliveredCount += 1;
+          this.stats.deliveredByType[rider.typeKey] = (this.stats.deliveredByType[rider.typeKey] || 0) + 1;
+        }
         this.emit({ type: 'exited', person: rider, compartmentIndex });
       }
     }
@@ -114,7 +135,32 @@ class Game {
 
   letQueueEnter(queue, dt, isGateHeld) {
     const person = queue.update(dt, this.door, isGateHeld);
-    if (person) this.emit({ type: 'entered', person, compartmentIndex: person.compartmentIndex });
+    if (!person) return;
+    this.emit({ type: 'entered', person, compartmentIndex: person.compartmentIndex });
+    if (person.type.isTroublemaker) this.recordBreach(person);
+  }
+
+  /**
+   * Rush: a troublemaker held at the front of the street line (↓ held, finished
+   * walking up) loses patience, and after TROUBLEMAKER_PATIENCE_SECONDS gives up.
+   */
+  updateTroublemakers(dt, controls) {
+    const front = this.streetQueue.people[0];
+    if (!front || !front.type.isTroublemaker || front.secondsUntilReady > 0 || !controls.isStreetGateHeld) return;
+    front.patienceLeft -= dt;
+    if (front.patienceLeft > 0) return;
+    this.streetQueue.people.shift();
+    front.state = 'leaving';
+    this.stats.keptOut += 1;
+    this.emit({ type: 'turnedAway', person: front });
+  }
+
+  /** A troublemaker got into the door: a security strike (not counted in practice). */
+  recordBreach(person) {
+    if (this.mode !== 'tutorial') this.complaintCount += 1;
+    this.stats.breaches += 1;
+    this.stats.secondsSinceComplaint = 0;
+    this.emit({ type: 'breach', person });
   }
 
   updateRiderComfort(dt) {
@@ -126,7 +172,7 @@ class Game {
   }
 
   recordComplaint(person) {
-    this.complaintCount += 1;
+    if (this.mode !== 'tutorial') this.complaintCount += 1;
     this.stats.complaintsByType[person.typeKey] = (this.stats.complaintsByType[person.typeKey] || 0) + 1;
     this.stats.secondsSinceComplaint = 0;
     this.emit({ type: 'complained', person, reason: person.complaintReason });
@@ -143,6 +189,13 @@ class Game {
     if (this.secondsUntilLobbySpawn <= 0) {
       this.addToQueue('lobby', this.pickTypeKey('lobby'), ARRIVAL_WALK_SECONDS);
       this.secondsUntilLobbySpawn += LOBBY_SPAWN_INTERVAL;
+    }
+    if (this.mode === 'rush') {
+      this.secondsUntilTroublemaker -= dt;
+      if (this.secondsUntilTroublemaker <= 0) {
+        this.addToQueue('street', 'troublemaker', ARRIVAL_WALK_SECONDS);
+        this.secondsUntilTroublemaker += TROUBLEMAKER_INTERVAL_SECONDS * (0.7 + 0.6 * this.randomSource());
+      }
     }
   }
 

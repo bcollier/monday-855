@@ -4,10 +4,42 @@
 
 function drawHud(ctx, game, fx, ui) {
   drawDeliveredCounter(ctx, game, fx);
-  drawFlipClock(ctx, game, fx);
-  drawStrikes(ctx, game, fx);
+  if (game.mode === 'tutorial') {
+    drawPracticeBadge(ctx);
+  } else {
+    drawFlipClock(ctx, game, fx);
+    drawStrikes(ctx, game, fx);
+    if (game.mode === 'rush') drawRushBadge(ctx, game);
+  }
   drawControlsLegend(ctx);
   if (fx.hint) drawHint(ctx, fx.hint);
+}
+
+/** Tutorial: no clock, no strikes, just a reminder that nothing here counts. */
+function drawPracticeBadge(ctx) {
+  const width = 200;
+  drawCard(ctx, CANVAS_WIDTH / 2 - width / 2, 12, width, 44, { fill: PALETTE.safe, border: false, radius: 12 });
+  ctx.fillStyle = '#ffffff';
+  ctx.font = font(15, 'bold', FONT_DISPLAY);
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  fillSpacedText(ctx, 'PRACTICE', CANVAS_WIDTH / 2, 28, 3);
+  ctx.font = font(10, '600');
+  ctx.fillText('no clock · no strikes', CANVAS_WIDTH / 2, 45);
+}
+
+/** Rush: a small purple tag under the clock, with how many troublemakers you've kept out. */
+function drawRushBadge(ctx, game) {
+  const text = `RUSH · KEPT OUT ${game.stats.keptOut}`;
+  ctx.save();
+  ctx.font = font(10, 'bold', FONT_DISPLAY);
+  const width = ctx.measureText(text).width + 34;
+  fillRoundRect(ctx, CANVAS_WIDTH - 16 - width, 70, width, 20, 10, '#8a3fc2');
+  ctx.fillStyle = '#ffffff';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  fillSpacedText(ctx, text, CANVAS_WIDTH - 16 - width / 2, 80.5, 1.2);
+  ctx.restore();
 }
 
 // ---- Delivered (top left) ----

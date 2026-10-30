@@ -62,6 +62,7 @@ class Fx {
     this.cheerAge = Infinity;          // everyone bounces when the clock hits 9:00
     this.isNewBest = false;
     this.weather = createWeather();
+    this.hasAnnouncedTrouble = false;
   }
 
   /** Per-person look and motion. Created the first time a person is seen. */
@@ -73,7 +74,11 @@ class Fx {
         x: DOOR_CENTER_X,
         y: DOOR_CENTER_Y,
         facing: 0,
-        look: { ...makeLook(random), rare: pickRareLook(person.typeKey, random) },
+        look: {
+          ...makeLook(random),
+          rare: pickRareLook(person.typeKey, random),
+          trouble: person.type.isTroublemaker ? pickTroubleKind(random) : null,
+        },
         walkPhase: random() * 10,
         spinAge: Infinity,             // a rider who gets hit spins round once
         hopAge: Infinity,              // a happy leaver hops
@@ -168,6 +173,10 @@ class Fx {
         const start = pointOnQueuePath(event.person.fromSide, visual.queueDistance);
         visual.x = start.x;
         visual.y = start.y;
+        if (event.person.type.isTroublemaker && !this.hasAnnouncedTrouble) {
+          this.hasAnnouncedTrouble = true;
+          this.showBanner('TROUBLE INCOMING', 'Hold \u2193 while they\u2019re at the front of the line.', '#8a3fc2');
+        }
         const rare = visual.look.rare;
         if (rare) {
           this.sightings.push(rare.name);
@@ -193,6 +202,10 @@ class Fx {
           segment: 0,
           speed: EXIT_WALK_SPEED_FX * (event.person.typeKey === 'manager' ? 1.35 : 1),
         });
+        if (event.person.type.isTroublemaker) {
+          this.addFloater('uh oh...', visual.x, visual.y - 18, { color: '#8a3fc2', size: 12 });
+          break;
+        }
         this.deliveredBounce = 1;
         if (!event.person.hasComplained) this.onHappyDelivery(event.person, visual);
         break;
@@ -201,6 +214,27 @@ class Fx {
         this.complaintLog.push({ typeKey: event.person.typeKey, reason: event.reason, speed: game.door.speed, rareName: this.visualOf(event.person).look.rare?.name });
         this.onComplaint(event.person, event.reason);
         break;
+      case 'breach':
+        this.onBreach(event.person);
+        break;
+      case 'turnedAway': {
+        const visual = this.visualOf(event.person);
+        const kind = TROUBLE_KINDS[visual.look.trouble];
+        this.bubbles.push({ person: event.person, visual, text: randomLine(kind.turnedAway), age: 0, tone: 'calm' });
+        this.addFloater('KEPT OUT!', visual.x + 40, visual.y - 50, { color: '#8a3fc2', size: 15, life: 1.4 });
+        for (let i = 0; i < 14; i++) {
+          this.addParticle('confetti', visual.x, visual.y, 140, { life: 0.9, size: 3, color: i % 2 ? '#8a3fc2' : PALETTE.brass });
+        }
+        // They step over the belt and stomp off along the sidewalk.
+        this.walkers.push({
+          person: event.person,
+          visual,
+          path: [{ x: visual.x, y: visual.y }, { x: visual.x + 50, y: visual.y + 16 }, { x: CANVAS_WIDTH + 30, y: visual.y + 16 }],
+          segment: 0,
+          speed: 110,
+        });
+        break;
+      }
       case 'roundEnded':
         this.endScreenAge = 0;
         this.isNewBest = game.deliveredCount > this.bestDelivered && this.bestDelivered > 0;
@@ -328,6 +362,20 @@ class Fx {
     }
     const callout = streakCallout(this.happyStreak);
     if (callout) this.streakCallout = { text: callout, streak: this.happyStreak, age: 0 };
+  }
+
+  /** A troublemaker got into the door. Treated like a complaint: strike, shake, bubble. */
+  onBreach(person) {
+    const visual = this.visualOf(person);
+    const kind = TROUBLE_KINDS[visual.look.trouble];
+    this.complaintLog.push({ typeKey: 'troublemaker', reason: 'breach', speed: 0, rareName: kind.name });
+    this.bubbles.push({ person, visual, text: randomLine(kind.breach), age: 0 });
+    this.showBanner('SECURITY!', `${kind.name.replace(/^./, (c) => c.toUpperCase())} got in.`, PALETTE.danger);
+    this.happyStreak = 0;
+    this.lastComplaintAge = 0;
+    if (!this.reducedMotion) this.shake = Math.max(this.shake, 6);
+    if (this.strikesStamped < 3) this.strikeStampAge[this.strikesStamped] = 0;
+    this.strikesStamped += 1;
   }
 
   // ---- Complaints ----
@@ -476,6 +524,10 @@ class Fx {
   // ---- Hints (first round of a page load) ----
 
   updateHints(dt, game) {
+    if (game.mode === 'tutorial') {   // the tutorial does its own teaching
+      this.hint = null;
+      return;
+    }
     if (this.hint) {
       this.hint.age += dt;
       const isDone = this.hint.age > HINT_SECONDS || (this.hint.key === 'push' && game.door.speed > 45);
@@ -520,6 +572,11 @@ const HINTS = [
     key: 'fast',
     text: 'Easy! Go past their top speed and the wing smacks them. Let go of [SPACE].',
     when: (game) => game.door.allRiders().some((rider) => !rider.hasComplained && game.door.speed > rider.type.comfortMaxSpeed - 12),
+  },
+  {
+    key: 'trouble',
+    text: 'Troublemaker! Hold [↓] while they\u2019re at the front of the line until they give up.',
+    when: (game) => game.streetQueue.people.some((person) => person.type.isTroublemaker),
   },
   {
     key: 'conflict',

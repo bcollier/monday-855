@@ -12,9 +12,9 @@
 //      nobody around, idle at a gentle speed so people can step in.
 //   2. If no speed works for everyone (NO SAFE SPEED), stay just under the lowest
 //      top speed: a slow complaint takes 1.5 s, a fast one is instant.
-//   3. Hold a gate when the next person would make NO SAFE SPEED, or when the door
-//      is still too fast for them to step in safely, unless that line is about to
-//      gridlock.
+//   3. Hold a gate when the next person would make NO SAFE SPEED, when the door
+//      is still too fast for them to step in safely, or when they're a troublemaker
+//      (Rush), unless that line is about to gridlock.
 
 const AUTOPILOT_STYLES = {
   careful: { reactionSeconds: 0.25, usesGates: true, idleSpeed: 45, gridlockMargin: 2, aimWithinRange: 0.4 },
@@ -71,6 +71,7 @@ function decideAutopilot(game, pilot) {
   const shouldHold = (queue) => {
     const person = queue.people[0];
     if (!pilot.style.usesGates || !person || nearGridlock(queue)) return false;
+    if (person.type.isTroublemaker) return true;   // Rush: keep them out until they give up
     const wouldConflict = !isWorkable(sharedComfortRange([...calmRiders, person]));
     const tooFastToStepIn = speed > person.type.comfortMaxSpeed - 4;
     return wouldConflict || tooFastToStepIn;

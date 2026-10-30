@@ -70,6 +70,22 @@ const PERSON_TYPES = {
       tooSlow: ["I'M PAID PER STOP!", 'COME ON, COME ON...', "I'M DOUBLE-PARKED!"],
     },
   },
+  // Rush mode only (not in the original spec): someone who should NOT get in.
+  // Hold ↓ while they're at the front of the street line and they give up and
+  // leave. If one steps into the door it's a security strike. Any speed suits
+  // them, so they never complain about the door and never narrow the SAFE ZONE.
+  troublemaker: {
+    displayName: 'Troublemaker',
+    label: 'X',
+    color: '#8a3fc2',
+    comfortMinSpeed: 0,
+    comfortMaxSpeed: DOOR_MAX_SPEED,
+    streetSpawnWeight: 0,   // never picked by the normal spawner; Rush adds them separately
+    lobbySpawnWeight: 0,
+    takesWholeCompartment: false,
+    isTroublemaker: true,
+    complaintLines: { tooFast: ['WHEEE!'], tooSlow: ['...'] },   // unused: every speed suits them
+  },
 };
 
 /** Picks a random type key for the given side, using the spawn weights. */
@@ -120,6 +136,7 @@ class Person {
     this.secondsTooSlow = 0;        // how long the door has been below this person's range, in a row
     this.hasComplained = false;     // each person complains at most once (SPEC 2.6)
     this.complaintReason = null;    // 'tooFast' | 'tooSlow' once they have complained
+    this.patienceLeft = TROUBLEMAKER_PATIENCE_SECONDS;   // troublemakers only: held at the front this long, they leave
     // Pixel position, ONLY used while 'exiting'. Queued and riding people are
     // positioned by their queue index / door angle at draw time instead.
     this.x = 0;

@@ -226,3 +226,28 @@ function celebrationScale(fx, visual, personId) {
   if (fx.cheerAge < 3) scale += 0.16 * Math.abs(Math.sin(fx.cheerAge * 9 + personId)) * (1 - fx.cheerAge / 3);
   return scale;
 }
+
+/** When a troublemaker reaches the front of the street line and ↓ isn't held: a flashing HOLD ↓ sign. */
+function drawTroubleWarning(ctx, game, fx) {
+  const front = game.streetQueue.people[0];
+  if (game.phase !== 'playing' || !front || !front.type.isTroublemaker || fx.gateAmount.street > 0.5) return;
+  const point = queueFrontPoint('street');
+  const flash = 0.5 + 0.5 * Math.sin(fx.time * 12);
+  ctx.save();
+  ctx.translate(point.x + 19 + 48, point.y - 10);
+  ctx.scale(1 + flash * 0.06, 1 + flash * 0.06);
+  fillRoundRect(ctx, -36 + 3, -14 - 3, 72, 28, 7, PALETTE.shadow);
+  fillRoundRect(ctx, -36, -14, 72, 28, 7, '#8a3fc2');
+  ctx.globalAlpha = 0.6 + 0.4 * flash;
+  roundRectPath(ctx, -33, -11, 66, 22, 5);
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = '#ffffff';
+  ctx.font = font(13, 'bold', FONT_DISPLAY);
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  fillSpacedText(ctx, 'HOLD \u2193', 0, 1, 1.5);
+  ctx.restore();
+}

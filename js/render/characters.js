@@ -41,6 +41,7 @@ function drawPersonFigure(ctx, x, y, facing, typeKey, look, pose = {}) {
     case 'manager': drawManager(ctx, look, pose); break;
     case 'intern': drawIntern(ctx, look, pose); break;
     case 'courier': drawCourier(ctx, look, pose); break;
+    case 'troublemaker': drawTroublemaker(ctx, look, pose); break;
     default: drawOfficeWorker(ctx, look, pose);
   }
   ctx.restore();
@@ -337,6 +338,103 @@ function drawCartCat(ctx, x, y, time) {
   }
 }
 
+// ---- Troublemakers (Rush mode) ----
+
+function drawTroublemaker(ctx, look, pose) {
+  if (look.trouble === 'pickpocket') return drawPickpocket(ctx, look, pose);
+  if (look.trouble === 'kid') return drawSpinnyKid(ctx, look, pose);
+  return drawSalesperson(ctx, look, pose);
+}
+
+/** Loud checked blazer, bow tie, clipboard thrust forward. */
+function drawSalesperson(ctx, look) {
+  ctx.save();
+  ctx.beginPath();
+  ctx.ellipse(0, 0, 8, 12.5, 0, 0, Math.PI * 2);
+  ctx.fillStyle = '#d8a93a';
+  ctx.fill();
+  ctx.clip();
+  ctx.strokeStyle = 'rgba(120, 60, 20, 0.55)';
+  ctx.lineWidth = 1.4;
+  for (let k = -12; k <= 12; k += 4.5) {
+    ctx.beginPath(); ctx.moveTo(-9, k); ctx.lineTo(9, k); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(k, -13); ctx.lineTo(k, 13); ctx.stroke();
+  }
+  ctx.restore();
+  fillCircle(ctx, 10, -6, 2.6, look.skin);
+  fillCircle(ctx, 10, 6, 2.6, look.skin);
+  fillRoundRect(ctx, 10.5, -6.5, 9, 13, 1.5, '#8a5a32');
+  fillRoundRect(ctx, 11.5, -5.2, 7, 10.6, 1, '#ffffff');
+  ctx.fillStyle = 'rgba(31, 36, 48, 0.4)';
+  for (let k = 0; k < 4; k++) ctx.fillRect(12.5, -3.6 + k * 2.4, 5, 0.8);
+  fillRoundRect(ctx, 10.2, -1.6, 2.2, 3.2, 0.8, '#c0c4cc');
+  drawHead(ctx, look, 'slick');
+  // Red bow tie
+  ctx.fillStyle = '#d43d3d';
+  ctx.beginPath();
+  ctx.moveTo(7, 0); ctx.lineTo(9, -2.6); ctx.lineTo(9, 2.6); ctx.closePath();
+  ctx.moveTo(7, 0); ctx.lineTo(5, -2.6); ctx.lineTo(5, 2.6); ctx.closePath();
+  ctx.fill();
+}
+
+/** Striped shirt, black beanie, a suspicious sack over the shoulder. */
+function drawPickpocket(ctx, look) {
+  fillCircle(ctx, -9, 6, 6, '#a08c6a');
+  fillCircle(ctx, -9, 6, 2, '#7a6a4e');
+  ctx.save();
+  ctx.beginPath();
+  ctx.ellipse(0, 0, 7.5, 12, 0, 0, Math.PI * 2);
+  ctx.fillStyle = '#f4f1ea';
+  ctx.fill();
+  ctx.clip();
+  ctx.fillStyle = '#1f2430';
+  for (let k = -12; k <= 12; k += 4) ctx.fillRect(-9, k, 18, 2);
+  ctx.restore();
+  fillCircle(ctx, 6, -9, 2.5, look.skin);
+  fillCircle(ctx, 6, 9, 2.5, look.skin);
+  fillCircle(ctx, 1.2, 0, 6.2, look.skin);
+  fillCircle(ctx, -1, 0, 6.2, '#1f2430');
+  ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+  ctx.lineWidth = 0.8;
+  for (const r of [2.5, 4.5]) { ctx.beginPath(); ctx.arc(-1, 0, r, 0, Math.PI * 2); ctx.stroke(); }
+  // Eye mask
+  fillRoundRect(ctx, 3.6, -4.6, 2.6, 9.2, 1.2, '#1f2430');
+  fillCircle(ctx, 5, -2.2, 0.9, '#ffffff');
+  fillCircle(ctx, 5, 2.2, 0.9, '#ffffff');
+}
+
+/** A small kid in a propeller cap with a lollipop. Just wants to spin. */
+function drawSpinnyKid(ctx, look, pose) {
+  ctx.save();
+  ctx.scale(0.8, 0.8);
+  fillEllipse(ctx, 0, 0, 7.5, 11, 0, '#2fb3a5');
+  fillCircle(ctx, 8, -7, 2.6, look.skin);
+  fillCircle(ctx, 8, 7, 2.6, look.skin);
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 1.4;
+  ctx.beginPath(); ctx.moveTo(8, 7); ctx.lineTo(14, 9); ctx.stroke();
+  fillCircle(ctx, 15.5, 9.5, 3.4, '#e25c8a');
+  fillCircle(ctx, 15.5, 9.5, 1.6, '#ffd1e3');
+  // Cap in four colors
+  const colors = ['#e2453c', '#f2c230', '#3b6fd1', '#36b368'];
+  for (let k = 0; k < 4; k++) {
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.arc(0, 0, 6.6, (k * Math.PI) / 2, ((k + 1) * Math.PI) / 2);
+    ctx.closePath();
+    ctx.fillStyle = colors[k];
+    ctx.fill();
+  }
+  // Propeller
+  ctx.rotate((pose.time ?? 0) * 18);
+  ctx.strokeStyle = '#f2c230';
+  ctx.lineWidth = 2.2;
+  ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(-8, 0); ctx.lineTo(8, 0); ctx.stroke();
+  fillCircle(ctx, 0, 0, 1.6, '#1f2430');
+  ctx.restore();
+}
+
 // ---- Mood and warning signs ----
 
 /**
@@ -396,6 +494,21 @@ function drawAngryCloud(ctx, x, y, time) {
   ctx.lineTo(0.3, 7.2);
   ctx.closePath();
   ctx.fill();
+  ctx.restore();
+}
+
+/** Purple "!" tag over a troublemaker, so they stand out in a crowded line. */
+function drawTroubleTag(ctx, x, y, time) {
+  const bob = Math.sin(time * 6) * 1.5;
+  ctx.save();
+  ctx.translate(x, y + bob);
+  fillCircle(ctx, 1.5, 1.5, 7.5, PALETTE.shadow);
+  fillCircle(ctx, 0, 0, 7.5, '#8a3fc2');
+  ctx.fillStyle = '#ffffff';
+  ctx.font = font(11, 'bold', FONT_DISPLAY);
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('!', 0, 0.5);
   ctx.restore();
 }
 
@@ -485,8 +598,28 @@ function drawWalkers(ctx, fx, ui) {
   }
 }
 
-/** Icons that float above people: angry clouds and sweat. Drawn after everything else in the world. */
+/** Icons that float above people: angry clouds, sweat, troublemaker tags. Drawn after everything else in the world. */
 function drawPeopleOverlays(ctx, game, fx) {
+  game.streetQueue.people.forEach((person, placeInLine) => {
+    if (!person.type.isTroublemaker) return;
+    const visual = fx.visualOf(person);
+    const isBeingHeld = placeInLine === 0 && person.patienceLeft < TROUBLEMAKER_PATIENCE_SECONDS;
+    if (isBeingHeld) {
+      // Patience ring: drains while ↓ holds them at the front. Empty = they give up.
+      const left = clamp(person.patienceLeft / TROUBLEMAKER_PATIENCE_SECONDS, 0, 1);
+      ctx.strokeStyle = 'rgba(138, 63, 194, 0.25)';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.arc(visual.x, visual.y, 17, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.strokeStyle = '#8a3fc2';
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.arc(visual.x, visual.y, 17, -Math.PI / 2, -Math.PI / 2 + left * Math.PI * 2);
+      ctx.stroke();
+    }
+    drawTroubleTag(ctx, visual.x, visual.y - 22, fx.time + person.id);
+  });
   const speed = game.door.speed;
   for (const person of game.door.allRiders()) {
     const visual = fx.visualOf(person);

@@ -182,6 +182,29 @@ function clearQueues(g) { g.streetQueue.people.length = 0; g.lobbyQueue.people.l
 { const g = new Game(); g.door.angle = 135; g.secondsUntilLobbySpawn = 999; run(g, 0.05, none);
   check('spawned people count toward the line immediately', g.streetQueue.length === 1 && g.streetQueue.people[0].secondsUntilReady > 1.9); }
 
+// Modes: Classic is the spec; Rush adds troublemakers; tutorial is practice
+{ const g = new Game(); let troublemakers = 0;
+  while (g.phase === 'playing') { for (const e of g.takeEvents()) if (e.type === 'spawned' && e.person.type.isTroublemaker) troublemakers++; clearQueues(g); g.update(DT, none); }
+  check('classic: no troublemakers in a whole round', troublemakers === 0); }
+{ const g = new Game(Math.random, 'rush'); let troublemakers = 0;
+  while (g.phase === 'playing') { for (const e of g.takeEvents()) if (e.type === 'spawned' && e.person.type.isTroublemaker) troublemakers++; clearQueues(g); g.update(DT, none); }
+  check('rush: troublemakers arrive (about every 15 s from 20 s)', troublemakers >= 7 && troublemakers <= 14, 'count ' + troublemakers); }
+{ const g = new Game(Math.random, 'rush'); g.secondsUntilStreetSpawn = 999; g.secondsUntilLobbySpawn = 999; g.secondsUntilTroublemaker = 999;
+  g.door.angle = 135; g.addToQueue('street', 'troublemaker'); g.addToQueue('street', 'officeWorker');
+  const held = { ...none, isStreetGateHeld: true }; run(g, 2.4, held);
+  check('rush: a held troublemaker waits at the front', g.streetQueue.people[0].type.isTroublemaker && g.complaintCount === 0);
+  const seen = []; run(g, 0.2, held); for (const e of g.takeEvents()) seen.push(e.type);
+  check('rush: ...and gives up after 2.5 s', seen.includes('turnedAway') && g.streetQueue.length === 1 && g.stats.keptOut === 1 && g.complaintCount === 0); }
+{ const g = new Game(Math.random, 'rush'); g.secondsUntilStreetSpawn = 999; g.secondsUntilLobbySpawn = 999; g.secondsUntilTroublemaker = 999;
+  g.door.angle = 135; g.addToQueue('street', 'troublemaker'); run(g, 0.5, none);
+  check('rush: a troublemaker who gets in is a strike', g.complaintCount === 1 && g.stats.breaches === 1 && g.takeEvents().some((e) => e.type === 'breach'));
+  for (let i = 0; i < 60 * 10; i++) g.update(DT, g.door.speed < 60 ? push : none);
+  check('rush: troublemakers never complain about speed and are not counted as delivered', g.complaintCount === 1 && g.deliveredCount === 0); }
+{ const g = new Game(Math.random, 'tutorial'); g.addToQueue('street', 'intern'); g.door.angle = 135; run(g, 0.5, none);
+  for (let i = 0; i < 60 * 30; i++) g.update(DT, push);
+  check('tutorial: no clock, no arrivals, strikes do not count, never ends', g.secondsElapsed === 0 && g.phase === 'playing' && g.complaintCount === 0 && g.streetQueue.length === 0); }
+{ const g = new Game(); g.startMode('rush'); check('startMode switches mode and starts a round', g.mode === 'rush' && g.phase === 'playing'); g.reset(); check('reset keeps the mode', g.mode === 'rush'); }
+
 // Shared comfort range (drives the meter's SAFE ZONE / NO SAFE SPEED)
 { const r = (...keys) => sharedComfortRange(keys.map((k) => new Person(k, 'street')));
   check('shared range: nobody -> null', sharedComfortRange([]) === null);

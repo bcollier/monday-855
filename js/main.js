@@ -13,7 +13,7 @@ canvas.height = CANVAS_HEIGHT * pixelRatio;
 
 const game = new Game();
 const fx = new Fx();
-const ui = { showDebug: false, framesPerSecond: 60, areRulesFrozen: false, autopilot: null };
+const ui = { showDebug: false, framesPerSecond: 60, areRulesFrozen: false, autopilot: null, tutorial: null };
 let previousTimestamp = null;
 let unsimulatedSeconds = 0;
 
@@ -31,8 +31,25 @@ function fastForward(seconds) {
   const frameSeconds = 1 / 60;
   for (let t = 0; t < seconds; t += frameSeconds) {
     stepRules(frameSeconds);
-    fx.update(frameSeconds, game, game.takeEvents(), currentControls(0));
+    updateVisuals(frameSeconds);
   }
+}
+
+/** Hands this frame's rule events to the tutorial (if running) and the visual layer. */
+function updateVisuals(frameSeconds) {
+  const events = game.takeEvents();
+  ui.tutorial?.update(frameSeconds, game, events);
+  fx.update(frameSeconds, game, events, currentControls(0));
+}
+
+function startTutorial() {
+  game.startMode('tutorial');
+  ui.tutorial = new Tutorial(game);
+}
+
+function backToTitle() {
+  ui.tutorial = null;
+  game.showTitle();
 }
 
 const DEBUG_SPAWN_KEYS = { Digit1: 'officeWorker', Digit2: 'manager', Digit3: 'intern', Digit4: 'courier' };
@@ -40,11 +57,30 @@ const DEBUG_SPAWN_KEYS = { Digit1: 'officeWorker', Digit2: 'manager', Digit3: 'i
 function handleOneShotKeys() {
   if (wasKeyPressed('KeyD')) ui.showDebug = !ui.showDebug;
 
-  if (game.phase === 'title' && wasKeyPressed('Space')) game.start();
-  // R restarts (AC #26). Space does too once the end screen has had a moment, so a
-  // still-mashed Space can't skip the results.
-  else if (game.phase === 'ended' && (wasKeyPressed('KeyR') || (wasKeyPressed('Space') && fx.endScreenAge > 1.2))) game.reset();
-  else if (wasKeyPressed('KeyP') || wasKeyPressed('Escape')) game.togglePause();
+  const isPractice = game.mode === 'tutorial' && game.phase !== 'title';
+  if (game.phase === 'title') {
+    // Space starts a Classic round (AC #30); R is Rush; T is the tutorial.
+    if (wasKeyPressed('Space')) {
+      game.mode = 'classic';
+      game.start();
+    } else if (wasKeyPressed('KeyR')) {
+      game.startMode('rush');
+    } else if (wasKeyPressed('KeyT')) {
+      startTutorial();
+    }
+  } else if (isPractice && wasKeyPressed('Escape')) {
+    backToTitle();
+  } else if (isPractice && ui.tutorial?.isFinished && (wasKeyPressed('Space') || wasKeyPressed('KeyR'))) {
+    ui.tutorial = null;
+    game.startMode(wasKeyPressed('KeyR') ? 'rush' : 'classic');
+  } else if (game.phase === 'ended') {
+    // R restarts in the same mode (AC #26). Space does too once the end screen has
+    // had a moment, so a still-mashed Space can't skip the results. Esc: menu.
+    if (wasKeyPressed('KeyR') || (wasKeyPressed('Space') && fx.endScreenAge > 1.2)) game.reset();
+    else if (wasKeyPressed('Escape')) backToTitle();
+  } else if (wasKeyPressed('KeyP') || wasKeyPressed('Escape')) {
+    game.togglePause();
+  }
 
   if (ui.showDebug && game.phase === 'playing') {
     const side = isKeyHeld('ShiftLeft') || isKeyHeld('ShiftRight') ? 'lobby' : 'street';
@@ -82,7 +118,7 @@ function runFrame(timestamp) {
   handleOneShotKeys();
 
   stepRules(frameSeconds);
-  fx.update(frameSeconds, game, game.takeEvents(), currentControls(0));
+  updateVisuals(frameSeconds);
   drawGame(ctx, game, fx, ui, pixelRatio);
   endInputFrame();
 

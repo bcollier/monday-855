@@ -3,6 +3,7 @@
 // so balance changes are based on numbers. Run from the repo root:
 //   node tools/sim.js            # 200 rounds each of the careful and sloppy player
 //   node tools/sim.js 500        # more rounds
+//   node tools/sim.js 200 rush   # Rush mode (troublemakers)
 // Loads the rule files the same way tests/rules_test.js does: no browser needed.
 const fs = require('fs');
 const vm = require('vm');
@@ -16,9 +17,10 @@ vm.runInContext(code, ctx);
 const { Game, createAutopilot, autopilotControls, FINAL_MINUTE_STARTS_AT, SIMULATION_STEP } = ctx.api;
 
 const rounds = Number(process.argv[2]) || 200;
+const mode = process.argv[3] || 'classic';
 
 function playRound(styleName) {
-  const game = new Game();
+  const game = new Game(Math.random, mode);
   const pilot = createAutopilot(styleName);
   const complaints = [];
   let finalMinuteQueueSum = 0;
@@ -28,6 +30,7 @@ function playRound(styleName) {
     game.update(SIMULATION_STEP, autopilotControls(game, pilot, SIMULATION_STEP));
     for (const event of game.takeEvents()) {
       if (event.type === 'complained') complaints.push(`${event.person.typeKey}/${event.reason}`);
+      if (event.type === 'breach') complaints.push('troublemaker/breach');
     }
     maxStreetQueue = Math.max(maxStreetQueue, game.streetQueue.length);
     if (game.secondsElapsed >= FINAL_MINUTE_STARTS_AT) {
@@ -52,7 +55,7 @@ for (const styleName of ['careful', 'sloppy']) {
   const complaintKinds = {};
   for (const r of results) for (const c of r.complaints) complaintKinds[c] = (complaintKinds[c] || 0) + 1;
   const reachedFinal = results.filter((r) => r.finalMinuteQueue !== null);
-  console.log(`\n${styleName} player, ${rounds} rounds`);
+  console.log(`\n${styleName} player, ${mode}, ${rounds} rounds`);
   console.log(`  made it ${(100 * count('madeIt') / rounds).toFixed(0)}%   fired ${(100 * count('fired') / rounds).toFixed(0)}%   gridlock ${(100 * count('gridlock') / rounds).toFixed(0)}%`);
   console.log(`  average round ${average(results.map((r) => r.seconds)).toFixed(0)} s, delivered ${average(results.map((r) => r.delivered)).toFixed(1)}`);
   console.log(`  street line during 8:59: average ${average(reachedFinal.map((r) => r.finalMinuteQueue)).toFixed(1)} (rounds that got there: ${reachedFinal.length})`);

@@ -31,6 +31,7 @@ function drawGame(ctx, game, fx, ui, pixelRatio) {
   drawRain(ctx, fx);
   drawGateBarrier(ctx, 'street', fx.gateAmount.street);
   drawGateBarrier(ctx, 'lobby', fx.gateAmount.lobby);
+  drawTroubleWarning(ctx, game, fx);
   drawParticles(ctx, fx);
   if (fx.pigeon.state !== 'riding') drawPigeon(ctx, fx.pigeon, fx.time);
   drawPeopleOverlays(ctx, game, fx);
@@ -48,6 +49,7 @@ function drawGame(ctx, game, fx, ui, pixelRatio) {
     drawBanner(ctx, fx);
     drawFinalCountdown(ctx, game);
   }
+  if (ui.tutorial && game.mode === 'tutorial' && game.phase !== 'title') drawTutorial(ctx, ui.tutorial, fx);
   if (ui.showDebug) drawDebugOverlay(ctx, game, ui);
 
   if (isTitle) drawTitleScreen(ctx, fx);

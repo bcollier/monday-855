@@ -4,7 +4,7 @@
 // also what makes Game.update() easy to drive from tests.
 
 // Keys the browser should not act on itself (Space and arrows would scroll the page).
-const GAME_KEY_CODES = new Set(['Space', 'ArrowUp', 'ArrowDown', 'KeyR', 'KeyP', 'KeyD', 'Escape']);
+const GAME_KEY_CODES = new Set(['Space', 'ArrowUp', 'ArrowDown', 'KeyR', 'KeyP', 'KeyD', 'KeyT', 'KeyC', 'Escape']);
 
 const heldKeyCodes = new Set();      // keys currently held down
 const pressedKeyCodes = new Set();   // keys pressed since the last endInputFrame() (one-shot actions)

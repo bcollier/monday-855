@@ -64,6 +64,13 @@ const STREET_SPAWN_RAMP = [
 const LOBBY_SPAWN_INTERVAL = 10;       // s, for the whole round
 const LOBBY_FIRST_SPAWN_SECONDS = 10;  // the first lobby person appears one interval in
 
+// ---- Rush mode: troublemakers ----
+// Not in the original spec: Rush is an extra mode (see SPEC.md "Additions"). Classic
+// never spawns troublemakers, so it plays exactly as specified.
+const TROUBLEMAKER_FIRST_SECONDS = 20;     // first one arrives at about 8:55:33
+const TROUBLEMAKER_INTERVAL_SECONDS = 15;  // average gap; each gap is 70–130% of this
+const TROUBLEMAKER_PATIENCE_SECONDS = 2.5; // held at the front of the street line this long, they give up
+
 // ---- Main loop ----
 const SIMULATION_STEP = 1 / 120;   // s. Rules always advance in exactly this step, so a round
                                    // plays out the same way at 60 Hz, 120 Hz or in a test

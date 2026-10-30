@@ -78,6 +78,7 @@ function doormanRank(game) {
 function describeComplaint(entry) {
   const type = PERSON_TYPES[entry.typeKey];
   const who = entry.rareName ? entry.rareName.replace(/^./, (c) => c.toUpperCase()) : type.displayName;
+  if (entry.reason === 'breach') return [who, 'got into the lobby'];
   if (entry.reason === 'tooFast') return [who, `too fast: ${Math.round(entry.speed)} °/s (max ${type.comfortMaxSpeed})`];
   return [who, `too slow: under ${type.comfortMinSpeed} °/s for 1.5 s`];
 }
@@ -161,4 +162,34 @@ function updateWeather(fx, weather, dt, game) {
     weather.announced = true;
     fx.showBanner('A LITTLE RAIN', 'Of course. It’s Monday.', '#5b8de0');
   }
+}
+
+// ---- Troublemakers (Rush mode) ----
+// Three flavors of the same rule: keep them out with ↓ until they give up.
+
+const TROUBLE_KINDS = {
+  salesperson: {
+    name: 'a pushy salesperson',
+    breach: ['GOT A MINUTE FOR SOLAR?', 'WHO’S IN CHARGE HERE?'],
+    turnedAway: ['FINE. I’LL TRY THE BANK.', 'YOU’LL REGRET THIS DEAL!'],
+  },
+  pickpocket: {
+    name: 'a pickpocket',
+    breach: ['NICE LOBBY... NICE WALLETS.', 'DON’T MIND ME!'],
+    turnedAway: ['WORTH A SHOT.', 'I WAS NEVER HERE.'],
+  },
+  kid: {
+    name: 'a kid who just wants to spin',
+    breach: ['WHEEEEE!', 'AGAIN! AGAIN!'],
+    turnedAway: ['AWW, MOM!', 'BORING DOOR!'],
+  },
+};
+const TROUBLE_KIND_KEYS = Object.keys(TROUBLE_KINDS);
+
+function pickTroubleKind(random) {
+  return TROUBLE_KIND_KEYS[Math.floor(random() * TROUBLE_KIND_KEYS.length)];
+}
+
+function randomLine(lines) {
+  return lines[Math.floor(Math.random() * lines.length)];
 }

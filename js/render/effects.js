@@ -122,7 +122,7 @@ function drawSpeechBubbles(ctx, fx) {
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(clamp(visual.x - 5, bubbleX - width / 2 + 11, bubbleX + width / 2 - 19), below ? bubbleY : bubbleY + height - 2, 10, 2);
 
-    ctx.fillStyle = bubble.person.complaintReason === 'tooSlow' ? '#b0700b' : PALETTE.danger;
+    ctx.fillStyle = bubble.tone === 'calm' ? '#8a3fc2' : bubble.person.complaintReason === 'tooSlow' ? '#b0700b' : PALETTE.danger;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(text, bubbleX, bubbleY + height / 2 + 1);

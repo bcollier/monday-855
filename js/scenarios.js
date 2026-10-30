@@ -7,7 +7,9 @@
 // "&advance=20" to fast-forward 20 seconds before the first frame (for screenshots).
 //
 //   title     - the title screen
-//   play      - skip the title screen
+//   play      - skip the title screen (Classic)
+//   rushMode  - start a Rush round (troublemakers)
+//   tutorial  - start the guided practice
 //   conflict  - manager + intern riding at once: NO SAFE SPEED
 //   rush      - 8:59, long lines, a full door
 //   paused    - the rush, paused
@@ -85,6 +87,13 @@ function applyScenario(game, ui, scenario) {
       break;
     case 'title':
       game.showTitle();
+      break;
+    case 'tutorial':
+      game.startMode('tutorial');
+      ui.tutorial = new Tutorial(game);
+      break;
+    case 'rushMode':
+      game.startMode('rush');
       break;
     case 'play':
     default:

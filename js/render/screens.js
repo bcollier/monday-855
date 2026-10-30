@@ -7,9 +7,9 @@ function drawTitleScreen(ctx, fx) {
   ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
   const width = 640;
-  const height = 430;
+  const height = 452;
   const x = (CANVAS_WIDTH - width) / 2;
-  const y = 104;
+  const y = 92;
   const rise = easeOutCubic(fx.time / 0.7);
   ctx.save();
   ctx.translate(0, (1 - rise) * 40);
@@ -73,21 +73,44 @@ function drawTitleScreen(ctx, fx) {
     ctx.fillText(`${type.comfortMinSpeed}–${type.comfortMaxSpeed} °/s · ${note}`, rightX + 58, rowY + 9);
   });
 
-  // Rules strip
-  ctx.fillStyle = PALETTE.inkSoft;
-  ctx.font = font(12, '500');
-  ctx.textAlign = 'center';
-  ctx.fillText('Too fast and the wing hits them. Too slow for 1.5 s and they snap.', CANVAS_WIDTH / 2, y + height - 64);
-  ctx.fillText('3 complaints and you\'re fired. More than 8 in a line is gridlock.', CANVAS_WIDTH / 2, y + height - 46);
-
-  // Start prompt
-  const blink = 0.6 + 0.4 * Math.abs(Math.sin(fx.time * 2.6));
-  ctx.globalAlpha = rise * blink;
-  const pillWidth = 236;
-  fillRoundRect(ctx, CANVAS_WIDTH / 2 - pillWidth / 2, y + height - 30, pillWidth, 34, 17, PALETTE.ink);
-  ctx.fillStyle = PALETTE.paper;
-  ctx.font = font(13, 'bold', FONT_DISPLAY);
-  fillSpacedText(ctx, 'PRESS SPACE TO START', CANVAS_WIDTH / 2, y + height - 12, 2);
+  // Three ways in: practice, the original, or Rush
+  const modes = [
+    { key: 'T', keyWidth: 30, title: 'Tutorial', note: '1 minute, no pressure', color: PALETTE.safe },
+    { key: 'SPACE', keyWidth: 66, title: 'Classic', note: 'the original', color: PALETTE.brass },
+    { key: 'R', keyWidth: 30, title: 'Rush', note: 'plus troublemakers', color: '#8a3fc2' },
+  ];
+  const buttonWidth = 184;
+  const gap = 14;
+  const buttonsLeft = CANVAS_WIDTH / 2 - (modes.length * buttonWidth + (modes.length - 1) * gap) / 2;
+  const buttonY = y + height - 86;
+  modes.forEach((mode, i) => {
+    const bx = buttonsLeft + i * (buttonWidth + gap);
+    const lift = Math.max(0, Math.sin(fx.time * 2.2 - i * 0.7)) * 2.5;
+    fillRoundRect(ctx, bx, buttonY - lift, buttonWidth, 66, 12, PALETTE.paperShade);
+    fillRoundRect(ctx, bx, buttonY - lift, 6, 66, 3, mode.color);
+    drawKeyCap(ctx, bx + 16, buttonY - lift + 20, mode.keyWidth, mode.key);
+    ctx.fillStyle = PALETTE.ink;
+    ctx.font = font(17, 'bold', FONT_DISPLAY);
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(mode.title, bx + 26 + mode.keyWidth, buttonY - lift + 25);
+    ctx.fillStyle = PALETTE.inkSoft;
+    ctx.font = font(11, '600');
+    ctx.fillText(mode.note, bx + 26 + mode.keyWidth, buttonY - lift + 44);
+  });
+  if (!fx.hintsShown.size) {
+    // First visit this page load: point at the tutorial
+    const bob = Math.sin(fx.time * 4) * 3;
+    ctx.save();
+    ctx.translate(buttonsLeft + buttonWidth - 34, buttonY - 2 + bob);
+    ctx.rotate(0.1);
+    fillRoundRect(ctx, -44, -11, 88, 22, 11, PALETTE.safe);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = font(10, 'bold', FONT_DISPLAY);
+    ctx.textAlign = 'center';
+    fillSpacedText(ctx, 'NEW HERE?', 0, 1, 1.2);
+    ctx.restore();
+  }
   ctx.restore();
 }
 
@@ -249,6 +272,11 @@ function drawEndScreen(ctx, game, fx) {
   ctx.font = font(14, 'bold', FONT_DISPLAY);
   ctx.textAlign = 'left';   // drawKeyCap leaves it centered
   fillSpacedText(ctx, 'TO TRY AGAIN', promptX + 146, y + height - 34, 2);
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = PALETTE.inkSoft;
+  ctx.font = font(10, '600');
+  ctx.textAlign = 'right';
+  ctx.fillText('Esc: menu', x + width - 18, y + height - 14);
   ctx.restore();
 }
 
@@ -260,6 +288,7 @@ function endScreenRows(game, fx) {
       return [`${i + 1}. ${who}`, what];
     })
     : reportCardRows(game);
+  if (game.mode === 'rush') rows.push(['Troublemakers kept out', `${game.stats.keptOut} (${game.stats.breaches} got in)`]);
   if (fx.sightings.length) {
     const names = [...new Set(fx.sightings)];
     rows.push(['Spotted today', names.length > 2 ? `${names.slice(0, 2).join(', ')} +${names.length - 2}` : names.join(', ')]);
