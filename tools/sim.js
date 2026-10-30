@@ -11,7 +11,7 @@ const path = require('path');
 const root = path.join(__dirname, '..');
 const ctx = vm.createContext({ Math, console });
 let code = '';
-for (const f of ['constants', 'door', 'person', 'queue', 'game', 'autopilot']) code += fs.readFileSync(path.join(root, 'js', f + '.js'), 'utf8') + '\n';
+for (const f of ['constants', 'door', 'person', 'queue', 'rush', 'game', 'autopilot']) code += fs.readFileSync(path.join(root, 'js', f + '.js'), 'utf8') + '\n';
 code += 'this.api = { Game, createAutopilot, autopilotControls, FINAL_MINUTE_STARTS_AT, SIMULATION_STEP };';
 vm.runInContext(code, ctx);
 const { Game, createAutopilot, autopilotControls, FINAL_MINUTE_STARTS_AT, SIMULATION_STEP } = ctx.api;
@@ -40,6 +40,10 @@ function playRound(styleName) {
   }
   return {
     endReason: game.endReason,
+    tips: game.stats.tipsEarned,
+    earnedBack: game.stats.strikesEarnedBack,
+    jobs: game.stats.jobsDone,
+    perks: game.stats.perksUsed,
     seconds: game.secondsElapsed,
     delivered: game.deliveredCount,
     complaints,
@@ -60,5 +64,6 @@ for (const styleName of ['careful', 'sloppy']) {
   console.log(`  average round ${average(results.map((r) => r.seconds)).toFixed(0)} s, delivered ${average(results.map((r) => r.delivered)).toFixed(1)}`);
   console.log(`  street line during 8:59: average ${average(reachedFinal.map((r) => r.finalMinuteQueue)).toFixed(1)} (rounds that got there: ${reachedFinal.length})`);
   console.log(`  longest street line: average ${average(results.map((r) => r.maxStreetQueue)).toFixed(1)}`);
+  if (mode === 'rush') console.log(`  tips earned ${average(results.map((r) => r.tips)).toFixed(0)}, strikes earned back ${average(results.map((r) => r.earnedBack)).toFixed(2)}, jobs done ${average(results.map((r) => r.jobs)).toFixed(1)}, perks used ${average(results.map((r) => r.perks)).toFixed(1)}`);
   console.log('  complaints:', Object.entries(complaintKinds).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${v}`).join(', '));
 }

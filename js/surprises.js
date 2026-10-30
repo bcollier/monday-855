@@ -87,7 +87,7 @@ function describeComplaint(entry) {
 function whoComplained(entry) {
   if (!entry.rareName) return displayNameFor(entry.typeKey);
   const rare = entry.rareName.replace(/^./, (c) => c.toUpperCase());
-  return entry.reason === 'breach' ? rare : `${rare} (${displayNameFor(entry.typeKey)})`;
+  return entry.reason === 'breach' ? rare : `${rare} (${displayNameFor(entry.typeKey, 'short')})`;
 }
 
 /**
@@ -101,9 +101,9 @@ function explainStrike(entry) {
     return { headline: 'LET IN A TROUBLEMAKER', detail: `${who} got into the lobby.`, advice: 'Hold ↓ while one is at the front.' };
   }
   if (entry.reason === 'tooFast') {
-    return { headline: 'TOO FAST', detail: `${who}: ${Math.round(entry.speed)} °/s, over their max of ${type.comfortMaxSpeed}.`, advice: 'Let go of SPACE sooner while they ride.' };
+    return { headline: 'TOO FAST', detail: `${who}: ${Math.round(entry.speed)} °/s, max ${type.comfortMaxSpeed}.`, advice: 'Let go of SPACE sooner while they ride.' };
   }
-  return { headline: 'TOO SLOW', detail: `${who} needed at least ${type.comfortMinSpeed} °/s.`, advice: 'Tap SPACE to keep the needle in their band.' };
+  return { headline: 'TOO SLOW', detail: `${who}: needs ${type.comfortMinSpeed}+ °/s.`, advice: 'Tap SPACE to keep the needle in their band.' };
 }
 
 // ---- The pigeon ----

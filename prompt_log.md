@@ -204,3 +204,18 @@ Result: careful 79% in Classic and 70% in Rush. The sloppy bot reaches 8:59 in 8
 - rare looks named with their type on the end screen ("The CEO (Late manager)")
 
 Also fixed: the end screen could show "4 / 3" when two riders complained on the same frame.
+
+## 15. Rewards and more to do
+
+**Prompts:**
+> is there any reward for all these deliveries? any other game mechanics that might make it fun?
+
+> do all 1-4
+
+**What happened:** Claude proposed four Rush-only mechanics, keeping Classic as the spec describes (§5 rules out saved progress and levels, so every reward lives inside one round):
+1. earning a strike back with 10 happy deliveries in a row
+2. tips and VIPs
+3. 30-second jobs
+4. perks bought with tips (1 coffee break, 2 security, 3 elevator music)
+
+Rules first (`js/rush.js` plus Game methods, 23 new tests), then the bot learned to use perks so the sim could measure them. The first prices made Rush too easy (the careful bot bought 12 perks a round and survived 93%). The streak bonus was capped at x2, VIP tips stopped being multiplied, and prices went up twice. The careful bot ended at 88% with about 8 perks a round. Then came the visuals, in `js/render/rush_hud.js`, checked in headless Chrome in both looks.

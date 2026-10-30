@@ -35,16 +35,20 @@ function drawGame(ctx, game, fx, ui, pixelRatio) {
   drawParticles(ctx, fx);
   if (fx.pigeon.state !== 'riding') drawPigeon(ctx, fx.pigeon, fx.time);
   drawPeopleOverlays(ctx, game, fx);
+  if (game.mode === 'rush') drawVipMarks(ctx, game, fx);
+  drawMusicNotes(ctx, game, fx);
   drawSpeechBubbles(ctx, fx);
   drawFloaters(ctx, fx);
   drawStreakCallout(ctx, fx);
   ctx.restore();
 
   drawFinalMinuteVignette(ctx, game, fx);
+  drawCoffeeBreakTint(ctx, game);
 
   // ---- Interface ----
   if (!isTitle) {
     drawHud(ctx, game, fx, ui);
+    if (game.mode === 'rush') drawRushHud(ctx, game, fx);
     drawSpeedMeter(ctx, game, fx);
     drawBanner(ctx, fx);
     drawFinalCountdown(ctx, game);

@@ -4,7 +4,7 @@
 // keyboard produces. Used by:
 //   - tools/sim.js, to measure how hard the game is when tuning numbers
 //   - index.html#scenario=play&bot, to watch a round play itself
-// It never changes the game.
+// It never changes the game, except to use Rush perks the way a player pressing 1 / 2 / 3 would.
 //
 // Strategy of the careful player:
 //   1. Plan around everyone riding AND whoever is next in line: aim a little below
@@ -15,10 +15,12 @@
 //   3. Hold a gate when the next person would make NO SAFE SPEED, when the door
 //      is still too fast for them to step in safely, or when they're a troublemaker
 //      (Rush), unless that line is about to gridlock.
+//   4. Rush perks: security when a troublemaker is in line, elevator music when
+//      there's NO SAFE SPEED, and a won coffee break as soon as 8:59 starts.
 
 const AUTOPILOT_STYLES = {
-  careful: { reactionSeconds: 0.25, usesGates: true, idleSpeed: 45, gridlockMargin: 2, aimWithinRange: 0.4 },
-  sloppy: { reactionSeconds: 0.6, usesGates: false, idleSpeed: 80, gridlockMargin: 0, aimWithinRange: 0.5 },
+  careful: { reactionSeconds: 0.25, usesGates: true, usesPerks: true, idleSpeed: 45, gridlockMargin: 2, aimWithinRange: 0.4 },
+  sloppy: { reactionSeconds: 0.6, usesGates: false, usesPerks: false, idleSpeed: 80, gridlockMargin: 0, aimWithinRange: 0.5 },
 };
 
 function createAutopilot(styleName = 'careful') {
@@ -78,6 +80,12 @@ function decideAutopilot(game, pilot) {
   };
   pilot.holdStreet = shouldHold(game.streetQueue);
   pilot.holdLobby = shouldHold(game.lobbyQueue);
+
+  if (pilot.style.usesPerks && game.mode === 'rush') {
+    if (game.streetQueue.people.some((person) => person.type.isTroublemaker)) game.usePerk('security');
+    if (sharedComfortRange(calmRiders)?.isEmpty) game.usePerk('music');
+    if (game.freeCoffees > 0 && game.secondsElapsed >= FINAL_MINUTE_STARTS_AT) game.usePerk('coffee');
+  }
 }
 
 function clampSpeed(speed, min, max) {

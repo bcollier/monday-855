@@ -46,6 +46,10 @@ class Fx {
     this.strikesStamped = 0;
     this.strikeStampAge = [Infinity, Infinity, Infinity];
     this.strikeNote = null;            // { entry, number, age }: why the latest strike happened
+    this.tipBounce = 0;                // Rush: the tips counter pops when money comes in
+    this.jobAge = 0;
+    this.lastJob = null;               // { job, isDone, age }: the job that just ended, for its stamp
+    this.perkFlash = {};               // perk name -> 1 when used, fades to 0
     this.deliveredBounce = 0;
     this.gateAmount = { street: 0, lobby: 0 };   // 0 = belt open, 1 = closed
     this.endScreenAge = 0;
@@ -115,6 +119,10 @@ class Fx {
     this.deliveredBounce = Math.max(0, this.deliveredBounce - dt * 3);
     for (let i = 0; i < 3; i++) this.strikeStampAge[i] += dt;
     if (this.strikeNote) this.strikeNote.age += dt;
+    this.tipBounce = Math.max(0, this.tipBounce - dt * 4);
+    this.jobAge += dt;
+    if (this.lastJob) this.lastJob.age += dt;
+    for (const name of Object.keys(this.perkFlash)) this.perkFlash[name] = Math.max(0, this.perkFlash[name] - dt * 2);
 
     for (const side of ['street', 'lobby']) {
       const isHeld = game.phase === 'playing' && (side === 'street' ? controls.isStreetGateHeld : controls.isLobbyGateHeld);
@@ -225,7 +233,7 @@ class Fx {
         const visual = this.visualOf(event.person);
         const kind = TROUBLE_KINDS[visual.look.trouble];
         this.bubbles.push({ person: event.person, visual, text: randomLine(kind.turnedAway), age: 0, tone: 'calm' });
-        this.addFloater('KEPT OUT!', visual.x + 40, visual.y - 50, { color: '#8a3fc2', size: 15, life: 1.4 });
+        this.addFloater(event.bySecurity ? 'ESCORTED OUT!' : 'KEPT OUT!', visual.x + 40, visual.y - 50, { color: '#8a3fc2', size: 15, life: 1.4 });
         for (let i = 0; i < 14; i++) {
           this.addParticle('confetti', visual.x, visual.y, 140, { life: 0.9, size: 3, color: i % 2 ? '#8a3fc2' : PALETTE.brass });
         }
@@ -239,6 +247,40 @@ class Fx {
         });
         break;
       }
+      // ---- Rush extras ----
+      case 'tipped': {
+        const visual = this.visualOf(event.person);
+        const text = event.isVip ? `VIP +$${event.amount}` : `+$${event.amount}`;
+        this.addFloater(text, visual.x + 30, visual.y + 10, { color: TIP_GOLD, size: event.isVip ? 17 : 12, life: event.isVip ? 1.6 : 1 });
+        this.tipBounce = 1;
+        if (event.isVip) for (let i = 0; i < 16; i++) this.addParticle('confetti', visual.x, visual.y, 150, { life: 0.9, size: 3, color: i % 2 ? VIP_GOLD : '#ffffff' });
+        break;
+      }
+      case 'strikeEarnedBack':
+        this.showBanner('STRIKE EARNED BACK!', '10 happy deliveries in a row. One pink slip, shredded.', PALETTE.safe);
+        this.strikesStamped = Math.max(0, this.strikesStamped - 1);
+        this.strikeStampAge[this.strikesStamped] = Infinity;
+        this.burstConfetti();
+        break;
+      case 'jobStarted':
+        this.jobAge = 0;
+        this.lastJob = null;
+        this.showBanner('NEW JOB', `${event.job.text}. You have ${JOB_SECONDS} seconds.`, PALETTE.brass);
+        break;
+      case 'jobDone':
+      case 'jobFailed':
+        this.lastJob = { job: event.job, isDone: event.type === 'jobDone', age: 0 };
+        if (event.type === 'jobDone') {
+          this.showBanner('JOB DONE!', `+$${JOB_REWARD_TIPS} and a free coffee break (press 1).`, PALETTE.safe);
+          this.tipBounce = 1;
+        }
+        break;
+      case 'perkUsed':
+        this.perkFlash[event.name] = 1;
+        if (event.name === 'coffee') this.showBanner('COFFEE BREAK', 'Everything slows down for a few seconds.', '#965f28');
+        else if (event.name === 'music') this.showBanner('♪ ELEVATOR MUSIC ♪', 'Everyone chills out. No complaints for 6 seconds.', '#7a5cc2');
+        else this.showBanner('SECURITY', 'Troublemakers escorted off the premises.', '#8a3fc2');
+        break;
       case 'roundEnded':
         this.endScreenAge = 0;
         this.isNewBest = game.deliveredCount > this.bestDelivered && this.bestDelivered > 0;
@@ -589,6 +631,27 @@ const HINTS = [
     key: 'trouble',
     text: 'Troublemaker! Hold [↓] while they\u2019re at the front of the line until they give up.',
     when: (game) => game.streetQueue.people.some((person) => person.type.isTroublemaker),
+  },
+  // Rush extras (rush.js)
+  {
+    key: 'earnBack',
+    text: 'Strike! 10 happy deliveries in a row earn it back (dots, top right).',
+    when: (game) => game.mode === 'rush' && game.complaintCount > 0,
+  },
+  {
+    key: 'perk',
+    text: 'You can afford a perk! Press [1], [2] or [3] (bottom right).',
+    when: (game) => game.mode === 'rush' && Object.keys(PERKS).some((name) => { const price = game.perkPrice(name); return price !== null && price <= game.tips; }),
+  },
+  {
+    key: 'vip',
+    text: 'A VIP (gold star)! A smooth ride, never yellow, tips $10.',
+    when: (game) => game.mode === 'rush' && game.streetQueue.people.some((person) => person.isVip),
+  },
+  {
+    key: 'tips',
+    text: 'Happy riders tip! 5 happy deliveries in a row double your tips.',
+    when: (game) => game.mode === 'rush' && game.tips > 0,
   },
   {
     key: 'conflict',

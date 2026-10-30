@@ -80,7 +80,7 @@ function drawTitleScreen(ctx, fx) {
   const modes = [
     { key: 'T', keyWidth: 30, title: 'Tutorial', note: '1 minute, no pressure', color: PALETTE.safe },
     { key: 'SPACE', keyWidth: 66, title: 'Classic', note: 'the original', color: PALETTE.brass },
-    { key: 'R', keyWidth: 30, title: 'Rush', note: 'plus troublemakers', color: '#8a3fc2' },
+    { key: 'R', keyWidth: 30, title: 'Rush', note: 'troublemakers, tips, perks', color: '#8a3fc2' },
   ];
   const buttonWidth = 184;
   const gap = 14;
@@ -305,7 +305,11 @@ function endScreenRows(game, fx) {
       return [`${i + 1}. ${who}`, what];
     })
     : reportCardRows(game);
-  if (game.mode === 'rush') rows.push(['Troublemakers kept out', `${game.stats.keptOut} (${game.stats.breaches} got in)`]);
+  if (game.mode === 'rush') {
+    const s = game.stats;
+    rows.push(['Troublemakers kept out', `${s.keptOut} (${s.breaches} got in)`]);
+    rows.push(['Tips · jobs · strikes earned back', `$${s.tipsEarned} · ${s.jobsDone} · ${s.strikesEarnedBack}`]);
+  }
   if (fx.sightings.length) {
     const names = [...new Set(fx.sightings)];
     rows.push(['Spotted today', names.length > 2 ? `${names.slice(0, 2).join(', ')} +${names.length - 2}` : names.join(', ')]);

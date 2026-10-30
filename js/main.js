@@ -83,6 +83,13 @@ function handleOneShotKeys() {
     game.togglePause();
   }
 
+  // Rush perks: 1 / 2 / 3 (with the debug overlay open, those keys add people instead)
+  if (game.mode === 'rush' && game.phase === 'playing' && !ui.showDebug) {
+    for (const [name, perk] of Object.entries(PERKS)) {
+      if (wasKeyPressed(perk.key)) game.usePerk(name);
+    }
+  }
+
   if (ui.showDebug && game.phase === 'playing') {
     const side = isKeyHeld('ShiftLeft') || isKeyHeld('ShiftRight') ? 'lobby' : 'street';
     for (const [code, typeKey] of Object.entries(DEBUG_SPAWN_KEYS)) {

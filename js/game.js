@@ -16,7 +16,7 @@ class Game {
    * @param {() => number} randomSource  defaults to Math.random; pass a seeded one in tests
    * @param {'classic'|'rush'|'tutorial'} mode
    *   classic  - exactly SPEC.md
-   *   rush     - classic plus troublemakers (SPEC.md "Additions")
+   *   rush     - classic plus troublemakers, tips, jobs and perks (SPEC.md "Additions", rush.js)
    *   tutorial - practice: no clock, no automatic arrivals, strikes don't count,
    *              the round never ends. tutorial.js decides who arrives.
    */
@@ -56,7 +56,20 @@ class Game {
       longestCalmSeconds: 0,
       keptOut: 0,      // troublemakers turned away (Rush)
       breaches: 0,     // troublemakers who got in (Rush)
+      tipsEarned: 0,   // Rush, before spending
+      vipsDelivered: 0,
+      strikesEarnedBack: 0,
+      jobsDone: 0,
+      perksUsed: 0,
     };
+    // Rush extras (rush.js). Unused in Classic and practice.
+    this.tips = 0;                  // dollars in pocket, to spend on perks
+    this.happyStreak = 0;           // happy deliveries in a row since the last strike
+    this.earnBackProgress = 0;      // happy deliveries in a row while a strike is on the board
+    this.freeCoffees = 0;           // coffee breaks won from jobs
+    this.perkSecondsLeft = { coffee: 0, music: 0 };
+    this.job = null;                // { kind, text, target, progress, secondsLeft, ... } while one is running
+    this.secondsUntilJob = JOB_FIRST_SECONDS;
     this.emit({ type: 'roundStarted' });
   }
 
@@ -94,6 +107,7 @@ class Game {
   update(dt, controls) {
     if (this.phase !== 'playing') return;
     const isPractice = this.mode === 'tutorial';
+    if (this.mode === 'rush') dt = this.updatePerks(dt);   // a coffee break slows everything down
 
     if (!isPractice) this.secondsElapsed = Math.min(ROUND_DURATION_SECONDS, this.secondsElapsed + dt);
     this.door.update(dt, controls.isPushingDoor);
@@ -105,6 +119,7 @@ class Game {
     this.updateRiderComfort(dt);
     if (!isPractice) this.spawnPeople(dt);
     this.moveExitingPeople(dt);
+    if (this.mode === 'rush') this.updateJob(dt);
     if (!isPractice) this.checkForEndOfRound();
   }
 
@@ -129,6 +144,7 @@ class Game {
           this.stats.deliveredByType[rider.typeKey] = (this.stats.deliveredByType[rider.typeKey] || 0) + 1;
         }
         this.emit({ type: 'exited', person: rider, compartmentIndex });
+        if (this.mode === 'rush' && !rider.type.isTroublemaker && !rider.hasComplained) this.rewardHappyDelivery(rider);
       }
     }
   }
@@ -153,11 +169,13 @@ class Game {
     front.state = 'leaving';
     this.stats.keptOut += 1;
     this.emit({ type: 'turnedAway', person: front });
+    this.progressJob({ type: 'keptOut', person: front });
   }
 
   /** A troublemaker got into the door: a security strike (not counted in practice). */
   recordBreach(person) {
     if (this.mode !== 'tutorial') this.complaintCount += 1;
+    this.onStrike();
     this.stats.breaches += 1;
     this.stats.secondsSinceComplaint = 0;
     this.emit({ type: 'breach', person });
@@ -166,13 +184,17 @@ class Game {
   updateRiderComfort(dt) {
     this.stats.secondsSinceComplaint += dt;
     this.stats.longestCalmSeconds = Math.max(this.stats.longestCalmSeconds, this.stats.secondsSinceComplaint);
+    // Rush perk: while the elevator music plays, riders stay calm (their timers wait too).
+    if (this.perkSecondsLeft.music > 0) return;
     for (const rider of this.door.allRiders()) {
       if (rider.updateComfort(this.door.speed, dt)) this.recordComplaint(rider);
+      if (rider.mood === 'impatient') rider.wasImpatient = true;   // a VIP's ride is no longer perfect
     }
   }
 
   recordComplaint(person) {
     if (this.mode !== 'tutorial') this.complaintCount += 1;
+    this.onStrike();
     this.stats.complaintsByType[person.typeKey] = (this.stats.complaintsByType[person.typeKey] || 0) + 1;
     this.stats.secondsSinceComplaint = 0;
     this.emit({ type: 'complained', person, reason: person.complaintReason });
@@ -200,6 +222,112 @@ class Game {
     }
   }
 
+  // ---- Rush extras (rush.js) ----
+
+  /** A strike resets the tip streak and the earn-back count, and fails a "no strikes" job. */
+  onStrike() {
+    if (this.mode !== 'rush') return;
+    this.happyStreak = 0;
+    this.earnBackProgress = 0;
+    if (this.job?.lasts) this.finishJob(false);
+  }
+
+  /** Tips, the streak, earning a strike back, and job progress for one happy delivery. */
+  rewardHappyDelivery(person) {
+    this.happyStreak += 1;
+    const multiplier = person.isVip ? 1 : tipMultiplierFor(this.happyStreak);
+    const amount = baseTipFor(person) * multiplier;
+    this.tips += amount;
+    this.stats.tipsEarned += amount;
+    if (person.isVip) this.stats.vipsDelivered += 1;
+    this.emit({ type: 'tipped', person, amount, multiplier, isVip: person.isVip });
+
+    if (this.complaintCount > 0) {
+      this.earnBackProgress += 1;
+      if (this.earnBackProgress >= EARN_BACK_STREAK) {
+        this.earnBackProgress = 0;
+        this.complaintCount -= 1;
+        this.stats.strikesEarnedBack += 1;
+        this.emit({ type: 'strikeEarnedBack' });
+      }
+    }
+    this.progressJob({ type: 'happy', person });
+  }
+
+  /** Starts a job every JOB_INTERVAL_SECONDS, and runs down the current one's time. */
+  updateJob(dt) {
+    if (this.job) {
+      this.job.secondsLeft -= dt;
+      if (this.job.secondsLeft <= 0) this.finishJob(this.job.lasts === true);
+    }
+    this.secondsUntilJob -= dt;
+    if (this.secondsUntilJob > 0 || this.job) return;
+    this.secondsUntilJob = JOB_INTERVAL_SECONDS;
+    if (this.secondsElapsed + JOB_SECONDS > ROUND_DURATION_SECONDS) return;   // no time to finish one
+    const troublemakersComing = this.secondsElapsed + 10 < TROUBLEMAKER_LAST_SECONDS;
+    const choices = JOB_KINDS.filter((kind) => !kind.needsTroublemakers || troublemakersComing);
+    const kind = choices[Math.floor(this.randomSource() * choices.length)];
+    this.job = { ...kind, progress: 0, secondsLeft: JOB_SECONDS };
+    this.emit({ type: 'jobStarted', job: this.job });
+  }
+
+  progressJob(event) {
+    if (!this.job || !this.job.counts(event)) return;
+    this.job.progress += 1;
+    if (this.job.progress >= this.job.target) this.finishJob(true);
+  }
+
+  finishJob(isDone) {
+    const job = this.job;
+    this.job = null;
+    if (isDone) {
+      this.tips += JOB_REWARD_TIPS;
+      this.stats.tipsEarned += JOB_REWARD_TIPS;
+      this.freeCoffees += 1;
+      this.stats.jobsDone += 1;
+    }
+    this.emit({ type: isDone ? 'jobDone' : 'jobFailed', job });
+  }
+
+  /** What a perk would cost right now (a won coffee break is free), or null if it can't be used. */
+  perkPrice(name) {
+    const perk = PERKS[name];
+    if (this.mode !== 'rush' || this.phase !== 'playing' || !perk) return null;
+    if (this.perkSecondsLeft[name] > 0) return null;   // already running
+    if (name === 'security' && !this.streetQueue.people.some((p) => p.type.isTroublemaker)) return null;
+    return name === 'coffee' && this.freeCoffees > 0 ? 0 : perk.cost;
+  }
+
+  /** Keys 1 / 2 / 3 in Rush. Returns true if the perk was used. */
+  usePerk(name) {
+    const price = this.perkPrice(name);
+    if (price === null || price > this.tips) return false;
+    if (name === 'coffee' && price === 0) this.freeCoffees -= 1;
+    this.tips -= price;
+    this.stats.perksUsed += 1;
+    if (name === 'security') {
+      for (const person of this.streetQueue.people.filter((p) => p.type.isTroublemaker)) {
+        this.streetQueue.people.splice(this.streetQueue.people.indexOf(person), 1);
+        person.state = 'leaving';
+        this.stats.keptOut += 1;
+        this.emit({ type: 'turnedAway', person, bySecurity: true });
+      }
+    } else {
+      this.perkSecondsLeft[name] = PERKS[name].seconds;
+    }
+    this.emit({ type: 'perkUsed', name });
+    return true;
+  }
+
+  /** Runs perk timers in real seconds; returns the dt the rules should use this step. */
+  updatePerks(dt) {
+    const isCoffeeBreak = this.perkSecondsLeft.coffee > 0;
+    for (const name of Object.keys(this.perkSecondsLeft)) {
+      this.perkSecondsLeft[name] = Math.max(0, this.perkSecondsLeft[name] - dt);
+    }
+    return isCoffeeBreak ? dt * COFFEE_TIME_SCALE : dt;
+  }
+
   /** Random passenger type for a side. Tests replace this to spawn one type only. */
   pickTypeKey(side) {
     const mix = side === 'street' ? this.currentRampStep().streetMix : undefined;
@@ -213,6 +341,10 @@ class Game {
   addToQueue(side, typeKey, walkSeconds = 0) {
     const person = new Person(typeKey, side);
     person.secondsUntilReady = walkSeconds;
+    // Rush: now and then a street arrival is a VIP who tips big for a smooth ride.
+    if (this.mode === 'rush' && side === 'street' && walkSeconds > 0 && !person.type.isTroublemaker) {
+      person.isVip = this.randomSource() < VIP_CHANCE;
+    }
     (side === 'street' ? this.streetQueue : this.lobbyQueue).add(person);
     this.emit({ type: 'spawned', person });
     return person;

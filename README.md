@@ -54,7 +54,13 @@ Extra flags: `&critter` switches to the Critter look, `&hold` freezes the rules 
 |---|---|---|
 | **T** | Tutorial | Seven short steps, about a minute. No clock, no strikes. Esc leaves. |
 | **Space** | Classic | SPEC.md, with the numbers tuned as logged in its "Tuning changes" section. This is the mode the acceptance criteria describe. |
-| **R** | Rush | Classic plus **troublemakers**: a pushy salesperson, a pickpocket and a kid who just wants to spin join the street line about every 15 s (none after about 8:59:20). Hold **↓** while one is at the front and after 2.5 s they give up. Let one in and it's a strike. |
+| **R** | Rush | Classic plus **troublemakers**: a pushy salesperson, a pickpocket and a kid who just wants to spin join the street line about every 15 s (none after about 8:59:20). Hold **↓** while one is at the front and after 2.5 s they give up. Let one in and it's a strike. Plus **tips, VIPs, jobs and perks** (below). |
+
+**Rush extras** (Rush only; Classic stays as the spec describes):
+- **Tips.** Every happy delivery tips $1, or $2 once you have 5 happy deliveries in a row. A **VIP** (gold star) tips $10 for a perfect ride, never yellow; $5 otherwise.
+- **Earn a strike back.** With a strike on the board, 10 happy deliveries in a row erase one. The green dots under the strike counter show how close you are.
+- **Jobs.** Every 40 s or so a 30-second job appears top left ("Deliver 2 interns without a spill"). Finish it for +$8 and a free coffee break. Missing one costs nothing.
+- **Perks** (bottom right), bought with tips: **1** Coffee break ($50, or free from a job): everything runs at half speed for 5 s. **2** Security ($30): every troublemaker in line is walked away. **3** Elevator music ($40): nobody complains for 6 s.
 
 **Critter look:** press **C** at any time to switch the whole cast and scenery to cozy animals: commuter bunnies, cats, bears, frogs and mice; a late fox; a coffee squirrel; a duck pushing a stroller of ducklings; a raccoon, a mole and a puppy as the troublemakers. It's only a different look: same rules, same comfort ranges, same criteria.
 
@@ -66,6 +72,7 @@ Extra flags: `&critter` switches to the Critter look, `&hold` freezes the rules 
 | **P** or **Esc** | Pause / unpause. Leaving the browser tab also pauses. |
 | **R** | New round in the same mode from the end screen (**Space** works too, after a moment). **Esc** goes back to the menu. |
 | **C** | Switch between the office look and the Critter look. |
+| **1 / 2 / 3** | Rush: use a perk (coffee break, security, elevator music). |
 | **D** | Debug overlay. While it's open, **1–4** add a worker / manager / intern / courier to the street line (hold **Shift** for the lobby line). |
 
 **Goal:** survive from 8:55 to 9:00 (3 real minutes) and deliver as many people as you can.
@@ -151,7 +158,8 @@ js/input.js           keyboard state -> readControls() / wasKeyPressed()
 js/door.js            Door: rotation with inertia, compartments, who rides where
 js/person.js          PERSON_TYPES table, sharedComfortRange(), Person: one passenger's state and complaint rules
 js/queue.js           Queue: one line of waiting people and the rules for stepping in
-js/game.js            Game: one round's rules, clock, spawning, exits, complaints, win/lose; emits events
+js/rush.js            Rush extras as data: tips, VIPs, earn-back, JOB_KINDS, PERKS
+js/game.js            Game: one round's rules, clock, spawning, exits, complaints, win/lose, Rush extras; emits events
 js/autopilot.js       a simulated player (used by tools/sim.js and #scenario=...&bot)
 js/tutorial.js        the guided practice: steps, checks, kind retries
 js/scenarios.js       the #scenario= moments
@@ -168,7 +176,8 @@ js/render/critters.js the Critter look's cast (and the look switch)
 js/render/critter_scene.js  the Critter look's lobby, meadow and lane
 js/render/lessons.js  the tutorial card and focus ring
 js/render/meter.js    the speed meter
-js/render/hud.js      delivered, flip clock, strikes, tips, debug overlay
+js/render/hud.js      delivered, flip clock, strikes and why-card, tips, debug overlay
+js/render/rush_hud.js Rush: tips counter, job card, perk shelf, earn-back dots, VIP stars, coffee tint, music notes
 js/render/screens.js  title, pause, end screens
 js/render/frame.js    drawGame(): all layers, back to front
 js/main.js            frame loop: one-shot keys -> rules in fixed steps -> fx -> draw
@@ -226,8 +235,8 @@ main.js runFrame()
 
 | Player | Classic | Rush | Notes |
 |---|---|---|---|
-| Careful (sees everything, reacts every 0.25 s, uses the gates) | 79% made it | 70% | Usually makes it with a strike or two to spare. Losses come in the 8:59 crowd. |
-| Sloppy (reacts every 0.6 s, never uses the gates) | 10% made it, 85% reach 8:59 | 0% | Gets through the calm opening, then is fired in the rush. |
+| Careful (sees everything, reacts every 0.25 s, uses the gates and perks) | 79–81% made it | 88% | Usually makes it with a strike or two to spare. Losses come in the 8:59 crowd. In Rush it earns about $230 a round, finishes ~3 jobs, uses ~8 perks and earns back a strike in 1 round in 3. |
+| Sloppy (reacts every 0.6 s, never uses the gates or perks) | 10% made it, 85% reach 8:59 | 0% | Gets through the calm opening, then is fired in the rush. In Rush, troublemakers walk straight in. |
 
 The target was "tense but fair": a skilled player usually makes it, but narrowly, and a new player sees the 8:59 climax. The arrival mix starts calm and gets harder, 8:59 is busier on both sides, and the street line averages 3.4 people during 8:59 with peaks of 6–7. SPEC.md, "Tuning changes", has the numbers before and after, and what was tried. A human sits between the two bots. The careful bot has perfect information, so its numbers say little about how a person will do; play-testing should have the final say.
 

@@ -11,7 +11,7 @@ function drawHud(ctx, game, fx, ui) {
     drawStrikes(ctx, game, fx);
     if (game.mode === 'rush') drawRushBadge(ctx, game);
   }
-  drawControlsLegend(ctx);
+  drawControlsLegend(ctx, game);
   if (fx.hint) drawHint(ctx, fx.hint);
 }
 
@@ -235,7 +235,7 @@ function drawStrikes(ctx, game, fx) {
     }
     ctx.restore();
   }
-  drawStrikeNote(ctx, fx, game.mode === 'rush' ? 96 : 70);
+  drawStrikeNote(ctx, fx, game.mode === 'rush' ? 120 : 70);   // Rush: below the badge and the earn-back row
 }
 
 const STRIKE_NOTE_SECONDS = 5;
@@ -285,8 +285,10 @@ function fitText(ctx, text, maxWidth) {
 
 // ---- Tips and legend ----
 
-function drawControlsLegend(ctx) {
-  const text = 'SPACE push   ↓ / ↑ hold a line   P pause   D debug';
+function drawControlsLegend(ctx, game) {
+  const text = game.mode === 'rush'
+    ? 'SPACE push   ↓ / ↑ hold a line   1 2 3 perks   P pause'
+    : 'SPACE push   ↓ / ↑ hold a line   P pause   D debug';
   ctx.save();
   ctx.font = font(10, '600');
   const width = ctx.measureText(text).width + 20;

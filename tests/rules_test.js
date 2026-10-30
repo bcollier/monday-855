@@ -11,10 +11,10 @@ const path = require('path');
 const root = path.join(__dirname, '..');
 const ctx = vm.createContext({ Math, console });
 let code = '';
-for (const f of ['constants', 'door', 'person', 'queue', 'game']) code += fs.readFileSync(path.join(root, 'js', f + '.js'), 'utf8') + '\n';
-code += 'this.api = { Game, Door, Person, Queue, PERSON_TYPES, angleDistance, pickPersonTypeKey, sharedComfortRange, FINAL_MINUTE_STARTS_AT };';
+for (const f of ['constants', 'door', 'person', 'queue', 'rush', 'game']) code += fs.readFileSync(path.join(root, 'js', f + '.js'), 'utf8') + '\n';
+code += 'this.api = { Game, Door, Person, Queue, PERSON_TYPES, angleDistance, pickPersonTypeKey, sharedComfortRange, FINAL_MINUTE_STARTS_AT, PERKS, EARN_BACK_STREAK, JOB_KINDS, JOB_REWARD_TIPS };';
 vm.runInContext(code, ctx);
-const { Game, Door, Person, PERSON_TYPES, angleDistance, pickPersonTypeKey, sharedComfortRange, FINAL_MINUTE_STARTS_AT } = ctx.api;
+const { Game, Door, Person, PERSON_TYPES, angleDistance, pickPersonTypeKey, sharedComfortRange, FINAL_MINUTE_STARTS_AT, PERKS, EARN_BACK_STREAK, JOB_KINDS, JOB_REWARD_TIPS } = ctx.api;
 
 let failures = 0;
 function check(name, cond, extra = '') { console.log((cond ? 'PASS ' : 'FAIL ') + name + (extra ? '  [' + extra + ']' : '')); if (!cond) failures++; }
@@ -225,6 +225,61 @@ function clearQueues(g) { g.streetQueue.people.length = 0; g.lobbyQueue.people.l
   check('shared range: manager + intern is empty (AC14)', r('manager', 'intern').isEmpty); }
 
 // Clock seconds and stats
+// Rush extras (rush.js): tips, VIPs, earning a strike back, jobs, perks. Classic has none of them.
+function quietRush() { const g = new Game(Math.random, 'rush'); g.secondsUntilStreetSpawn = 999; g.secondsUntilLobbySpawn = 999; g.secondsUntilTroublemaker = 999; g.secondsUntilJob = 999; return g; }
+const happyWorker = () => new Person('officeWorker', 'street');
+{ const g = quietRush(); g.door.angle = 270; g.addToQueue('street', 'officeWorker'); let tipped = null;
+  for (let i = 0; i < 60 * 8 && !tipped; i++) { g.update(DT, g.door.speed < 50 ? push : none); for (const e of g.takeEvents()) if (e.type === 'tipped') tipped = e; }
+  check('rush: a happy delivery tips $1', tipped && tipped.amount === 1 && g.tips === 1 && g.deliveredCount === 1); }
+{ const g = new Game(); g.secondsUntilStreetSpawn = 999; g.secondsUntilLobbySpawn = 999; g.door.angle = 270; g.addToQueue('street', 'officeWorker');
+  for (let i = 0; i < 60 * 8; i++) g.update(DT, g.door.speed < 50 ? push : none);
+  check('classic: no tips, jobs or VIPs', g.deliveredCount === 1 && g.tips === 0 && g.job === null && !g.takeEvents().some((e) => e.type === 'tipped')); }
+{ const g = quietRush(); const amounts = [];
+  for (let i = 0; i < 11; i++) { g.rewardHappyDelivery(happyWorker()); }
+  for (const e of g.takeEvents()) if (e.type === 'tipped') amounts.push(e.amount);
+  check('rush: streak doubles tips from 5 in a row', amounts.join() === '1,1,1,1,2,2,2,2,2,2,2', amounts.join()); }
+{ const g = quietRush(); const vip = new Person('manager', 'street'); vip.isVip = true; g.rewardHappyDelivery(vip);
+  const late = new Person('manager', 'street'); late.isVip = true; late.wasImpatient = true; g.rewardHappyDelivery(late);
+  check('rush: VIP tips $10 for a perfect ride, $5 if they went yellow', g.tips === 15 && g.stats.vipsDelivered === 2); }
+{ const g = quietRush(); g.complaintCount = 2;
+  for (let i = 0; i < EARN_BACK_STREAK - 1; i++) g.rewardHappyDelivery(happyWorker());
+  const before = g.complaintCount; g.rewardHappyDelivery(happyWorker());
+  check('rush: 10 happy deliveries in a row earn a strike back', before === 2 && g.complaintCount === 1 && g.stats.strikesEarnedBack === 1 && g.earnBackProgress === 0);
+  for (let i = 0; i < 5; i++) g.rewardHappyDelivery(happyWorker());
+  g.recordComplaint(new Person('intern', 'street'));
+  check('rush: a strike resets the streak and the earn-back count', g.happyStreak === 0 && g.earnBackProgress === 0 && g.complaintCount === 2); }
+{ const g = quietRush(); for (let i = 0; i < EARN_BACK_STREAK; i++) g.rewardHappyDelivery(happyWorker());
+  check('rush: no strikes = nothing to earn back (no banking)', g.complaintCount === 0 && g.earnBackProgress === 0); }
+{ const g = quietRush(); g.secondsUntilJob = 0; g.randomSource = () => 0;   // first job kind: 2 interns
+  run(g, DT, none); const job = g.job;
+  check('rush: a job starts', job && job.kind === JOB_KINDS[0].kind && job.progress === 0);
+  g.rewardHappyDelivery(new Person('intern', 'street')); g.rewardHappyDelivery(happyWorker()); g.rewardHappyDelivery(new Person('intern', 'street'));
+  check('rush: finishing a job pays tips and a free coffee break', g.job === null && g.stats.jobsDone === 1 && g.freeCoffees === 1 && g.tips === 1 + 1 + 1 + JOB_REWARD_TIPS); }
+{ const g = quietRush(); g.secondsUntilJob = 0; g.randomSource = () => 0; run(g, DT, none); g.secondsUntilJob = 999;
+  const seen = []; run(g, 31, none); for (const e of g.takeEvents()) seen.push(e.type);
+  check('rush: a job runs out after 30 s with no penalty', g.job === null && seen.includes('jobFailed') && g.complaintCount === 0 && g.tips === 0); }
+{ const g = quietRush(); g.secondsUntilJob = 0; g.randomSource = () => 0.99; run(g, DT, none); g.secondsUntilJob = 999;
+  const isNoStrikes = g.job?.kind === 'noStrikes'; run(g, 31, none);
+  check('rush: "no strikes" job pays out when time runs out', isNoStrikes && g.stats.jobsDone === 1);
+  g.secondsUntilJob = 0; g.randomSource = () => 0.99; run(g, DT, none); g.recordComplaint(new Person('intern', 'street'));
+  check('rush: ...and fails on a strike', g.job === null && g.stats.jobsDone === 1); }
+{ const g = quietRush(); g.tips = 5;
+  check('rush: a perk you can\'t afford does nothing', !g.usePerk('coffee') && g.tips === 5);
+  g.tips = PERKS.coffee.cost + 10; const before = g.secondsElapsed; check('rush: coffee break costs its price', g.usePerk('coffee') && g.tips === 10);
+  run(g, 1, none); check('rush: coffee break runs the rules at half speed', Math.abs(g.secondsElapsed - before - 0.5) < 0.02, (g.secondsElapsed - before).toFixed(3));
+  check('rush: can\'t stack the same perk', !g.usePerk('coffee'));
+  run(g, 5, none); g.freeCoffees = 1; check('rush: a won coffee break is free', g.usePerk('coffee') && g.tips === 10 && g.freeCoffees === 0); }
+{ const g = quietRush(); g.tips = 50; check('rush: security needs a troublemaker in line', !g.usePerk('security'));
+  g.addToQueue('street', 'officeWorker'); g.addToQueue('street', 'troublemaker'); g.addToQueue('street', 'troublemaker');
+  check('rush: security walks every troublemaker away', g.usePerk('security') && g.streetQueue.length === 1 && g.stats.keptOut === 2 && g.tips === 50 - PERKS.security.cost); }
+{ const g = quietRush(); g.tips = 50; const intern = new Person('intern', 'street'); intern.state = 'riding'; g.door.angle = 200; g.door.addRider(0, intern); g.door.speed = 150;
+  g.usePerk('music'); run(g, 0.3, push);
+  check('rush: elevator music: nobody complains', g.complaintCount === 0 && !intern.hasComplained);
+  g.perkSecondsLeft.music = 0; run(g, DT, push); check('rush: ...until it stops', intern.hasComplained); }
+{ const g = new Game(); g.tips = 100; check('classic: perks do nothing', !g.usePerk('coffee') && g.tips === 100); }
+{ let vips = 0; for (let i = 0; i < 2000; i++) { const g = quietRush(); if (g.addToQueue('street', 'manager', 2).isVip) vips++; }
+  check('rush: about 8% of street arrivals are VIPs', vips > 100 && vips < 220, String(vips)); }
+
 { const g = new Game(); g.secondsElapsed = 90; const c = g.clockTime();
   check('clock at 90 s is 8:57:30', c.hours === 8 && c.minutes === 57 && c.seconds === 30, JSON.stringify(c)); }
 

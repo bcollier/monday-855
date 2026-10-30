@@ -142,6 +142,8 @@ class Person {
     this.hasComplained = false;     // each person complains at most once (SPEC 2.6)
     this.complaintReason = null;    // 'tooFast' | 'tooSlow' once they have complained
     this.patienceLeft = TROUBLEMAKER_PATIENCE_SECONDS;   // troublemakers only: held at the front this long, they leave
+    this.isVip = false;             // Rush: tips big for a smooth ride
+    this.wasImpatient = false;      // Rush: went yellow at some point during the ride
     // Pixel position, ONLY used while 'exiting'. Queued and riding people are
     // positioned by their queue index / door angle at draw time instead.
     this.x = 0;

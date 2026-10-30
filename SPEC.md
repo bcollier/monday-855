@@ -235,5 +235,11 @@ Not part of this game, even if there's time left: sound and music, multiple leve
 *Added on top of the spec. Classic mode, the default when Space is pressed on the title screen, is the game described above with the tuning changes in the previous section, and meets every acceptance criterion (AC #22 as amended there).*
 
 - **Rush mode** (R on the title screen). Classic plus *troublemakers*: someone who must not get in joins the street line about every 15 s from 0:20 (`TROUBLEMAKER_*` in `js/constants.js`). If ↓ is held while one is at the front of the line (and has finished walking up), they give up after 2.5 s and leave. If one steps into the door it counts as a strike, the same as a complaint. Any door speed suits them, so they never complain about speed, and they don't count as delivered. This gives the gates a second job and a new trade-off: holding ↓ keeps the troublemaker out but stalls everyone behind them.
+- **Rush extras** (`js/rush.js`), so deliveries earn something and a bad start isn't a lost round:
+  - *Tips:* $1 per happy delivery (rider never complained), $2 from 5 happy deliveries in a row. A VIP (8% of street arrivals) tips $10 for a ride that never went yellow, $5 otherwise.
+  - *Earn a strike back:* with a strike on the board, 10 happy deliveries in a row remove one. A new strike restarts the count.
+  - *Jobs:* from 0:25, a 30 s job starts every 40 s (e.g. "Deliver 2 interns without a spill", "No strikes for 30 seconds"). Done: +$8 and a free coffee break. Missed: nothing.
+  - *Perks* (keys 1 / 2 / 3): coffee break, $50: the rules run at half speed for 5 real seconds, so the round lasts a little longer. Security, $30: every troublemaker in the street line leaves. Elevator music, $40: riders' comfort isn't checked for 6 s.
+  - Balance (careful bot, 400 rounds): Rush made it 70% → 88% with the extras. Perk prices were raised twice (from $10/$6/$8) because the bot was buying 12 a round.
 - **Tutorial** (T on the title screen). Seven guided steps in a practice round: no clock, no automatic arrivals, strikes don't count, the round never ends.
 - **Critter look** (C at any time). Only a different look: every animal is still one of the four passenger types (or a troublemaker), with the same comfort ranges and rules.
