@@ -114,7 +114,8 @@ function drawDoor(ctx, door) {
 
 function drawQueue(ctx, queue) {
   queue.people.forEach((person, placeInLine) => {
-    const point = queue.positionOf(placeInLine);
+    const direction = queue.side === 'street' ? 1 : -1;
+    const point = { x: DOOR_CENTER_X, y: DOOR_CENTER_Y + direction * (DOOR_RADIUS + QUEUE_GAP_FROM_DOOR + placeInLine * QUEUE_SPACING) };
     drawPerson(ctx, point.x, point.y, person);
   });
 }

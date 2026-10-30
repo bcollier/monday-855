@@ -17,7 +17,7 @@ const PERSON_TYPES = {
     comfortMinSpeed: 30,
     comfortMaxSpeed: 120,
     streetSpawnWeight: 55,
-    lobbySpawnWeight: 70,   // used once lobby spawning exists (AC #23)
+    lobbySpawnWeight: 70,
     takesWholeCompartment: false,
     complaintLine: 'WATCH IT!',
   },
@@ -45,11 +45,19 @@ const PERSON_TYPES = {
     takesWholeCompartment: false,
     complaintLine: 'MY LATTE!',
   },
-  // TODO(AC #15): add the courier from SPEC 2.5:
-  //   courier: comfort 15–70, label 'C', takesWholeCompartment: true,
-  //            streetSpawnWeight 10, lobbySpawnWeight 30
-  // Door.canAccept() already handles takesWholeCompartment, so the table entry should be enough.
-  // Test it: a courier at the front must wait for an EMPTY compartment, and so must everyone behind them.
+  // The courier's cart fills a whole compartment (SPEC 2.4). A courier at the front
+  // of a queue waits for an EMPTY compartment, and so does everyone behind them.
+  courier: {
+    displayName: 'Courier',
+    label: 'C',
+    color: '#d2502e',
+    comfortMinSpeed: 15,
+    comfortMaxSpeed: 70,
+    streetSpawnWeight: 10,
+    lobbySpawnWeight: 30,
+    takesWholeCompartment: true,
+    complaintLine: 'MY PACKAGES!',
+  },
 };
 
 /** Picks a random type key for the given side, using the spawn weights. */
@@ -68,12 +76,15 @@ function pickPersonTypeKey(side, randomNumber) {
   return typeKeys[typeKeys.length - 1];
 }
 
+let nextPersonId = 1;
+
 class Person {
   /**
    * @param {string} typeKey  a key of PERSON_TYPES
    * @param {'street'|'lobby'} fromSide  the side this person queued on
    */
   constructor(typeKey, fromSide) {
+    this.id = nextPersonId++;
     this.typeKey = typeKey;
     this.type = PERSON_TYPES[typeKey];
     this.fromSide = fromSide;
@@ -82,6 +93,7 @@ class Person {
     this.compartmentIndex = null;   // set by Door.addRider while riding
     this.secondsTooSlow = 0;        // how long the door has been below this person's range, in a row
     this.hasComplained = false;     // each person complains at most once (SPEC 2.6)
+    this.complaintReason = null;    // 'tooFast' | 'tooSlow' once they have complained
     // Pixel position, ONLY used while 'exiting'. Queued and riding people are
     // positioned by their queue index / door angle at draw time instead.
     this.x = 0;
@@ -103,17 +115,26 @@ class Person {
     if (doorSpeed > this.type.comfortMaxSpeed) {
       // Too fast: the wing hits them, so the complaint is immediate.
       this.hasComplained = true;
+      this.complaintReason = 'tooFast';
       return true;
     }
     if (doorSpeed < this.type.comfortMinSpeed) {
       this.secondsTooSlow += dt;
       if (this.secondsTooSlow > TOO_SLOW_GRACE_SECONDS) {
         this.hasComplained = true;
+        this.complaintReason = 'tooSlow';
         return true;
       }
       return false;
     }
     this.secondsTooSlow = 0;   // back inside the range resets the "too slow" timer
     return false;
+  }
+
+  /** 'furious' (complained), 'impatient' (too-slow timer running) or 'comfortable'. Drives the mood ring. */
+  get mood() {
+    if (this.hasComplained) return 'furious';
+    if (this.secondsTooSlow > 0) return 'impatient';
+    return 'comfortable';
   }
 }

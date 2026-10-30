@@ -46,13 +46,4 @@ class Queue {
     this.secondsSinceLastEntry = 0;
     return frontPerson;
   }
-
-  /** Pixel position of the person at the given place in line. Used by render.js. */
-  positionOf(placeInLine) {
-    const direction = this.side === 'street' ? 1 : -1;   // street line grows downward, lobby line upward
-    return {
-      x: DOOR_CENTER_X,
-      y: DOOR_CENTER_Y + direction * (DOOR_RADIUS + QUEUE_GAP_FROM_DOOR + placeInLine * QUEUE_SPACING),
-    };
-  }
 }

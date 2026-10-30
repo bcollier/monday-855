@@ -47,9 +47,18 @@ const ROUND_START_MINUTES = 8 * 60 + 55;   // 8:55 expressed in minutes after mi
 const ROUND_GAME_MINUTES = 5;
 
 // ---- Spawning ----
-const STREET_SPAWN_INTERVAL = 4;   // s. TODO(AC #22): ramp to 2.5 s after 8:57 and 1.5 s after 8:59 (SPEC 2.7)
-const LOBBY_SPAWN_INTERVAL = 10;   // s. TODO(AC #23): not used yet — nobody spawns on the lobby side in Phase 1
+// Street arrivals speed up as 9:00 approaches (SPEC 2.7). One game minute = 36 real
+// seconds, so 8:57 is at 72 s and 8:59 at 144 s.
+const STREET_SPAWN_RAMP = [
+  { fromSecond: 0, intervalSeconds: 4 },     // 8:55–8:57
+  { fromSecond: 72, intervalSeconds: 2.5 },  // 8:57–8:59
+  { fromSecond: 144, intervalSeconds: 1.5 }, // 8:59–9:00
+];
+const LOBBY_SPAWN_INTERVAL = 10;       // s, for the whole round
+const LOBBY_FIRST_SPAWN_SECONDS = 10;  // the first lobby person appears one interval in
 
 // ---- Main loop ----
+const SIMULATION_STEP = 1 / 120;   // s. Rules always advance in exactly this step, so a round
+                                   // plays out the same way at 60 Hz, 120 Hz or in a test
 const MAX_FRAME_SECONDS = 0.1;     // browsers pause requestAnimationFrame in background tabs; without
                                    // this cap the door would jump hundreds of degrees on return

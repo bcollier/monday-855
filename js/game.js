@@ -6,6 +6,10 @@
 // (see readControls() in input.js) and render.js reads its fields afterwards.
 // That split means you can drive a whole round from code in a test:
 //   const game = new Game(); game.update(0.016, { isPushingDoor: true, ... });
+//
+// Anything that happens (someone spawns, steps in, complains...) is also pushed
+// onto `game.events`. The visual layer (fx.js) drains them with takeEvents() to
+// start animations. The rules never wait on, or read back from, the visuals.
 
 class Game {
   /** @param {() => number} randomSource  defaults to Math.random; pass a seeded one in tests */
@@ -25,8 +29,45 @@ class Game {
     this.deliveredCount = 0;
     // Starting the countdown at 0 makes the first person appear on the first frame.
     this.secondsUntilStreetSpawn = 0;
-    this.phase = 'playing';         // 'playing' | 'ended'
+    this.secondsUntilLobbySpawn = LOBBY_FIRST_SPAWN_SECONDS;
+    this.phase = 'playing';         // 'title' | 'playing' | 'paused' | 'ended'
     this.endReason = null;          // 'fired' | 'gridlock' | 'madeIt' once the round ends
+    this.events = [];
+    // Facts for the end-of-round report card. Counted here because they are game facts.
+    this.stats = {
+      deliveredByType: {},
+      complaintsByType: {},
+      secondsSinceComplaint: 0,
+      longestCalmSeconds: 0,
+    };
+    this.emit({ type: 'roundStarted' });
+  }
+
+  /** Resets to a round that is waiting on the title screen. Space calls start(). */
+  showTitle() {
+    this.reset();
+    this.phase = 'title';
+  }
+
+  start() {
+    if (this.phase === 'title') this.phase = 'playing';
+  }
+
+  /** P key. Only a running round can be paused. */
+  togglePause() {
+    if (this.phase === 'playing') this.phase = 'paused';
+    else if (this.phase === 'paused') this.phase = 'playing';
+  }
+
+  emit(event) {
+    this.events.push(event);
+  }
+
+  /** Returns everything that happened since the last call, and forgets it. */
+  takeEvents() {
+    const events = this.events;
+    this.events = [];
+    return events;
   }
 
   /**
@@ -40,8 +81,8 @@ class Game {
     this.door.update(dt, controls.isPushingDoor);
 
     this.letRidersExit();
-    this.streetQueue.update(dt, this.door, controls.isStreetGateHeld);
-    this.lobbyQueue.update(dt, this.door, controls.isLobbyGateHeld);
+    this.letQueueEnter(this.streetQueue, dt, controls.isStreetGateHeld);
+    this.letQueueEnter(this.lobbyQueue, dt, controls.isLobbyGateHeld);
     this.updateRiderComfort(dt);
     this.spawnPeople(dt);
     this.moveExitingPeople(dt);
@@ -65,11 +106,20 @@ class Game {
         rider.y = DOOR_CENTER_Y + direction * DOOR_RADIUS;
         this.exitingPeople.push(rider);
         this.deliveredCount += 1;
+        this.stats.deliveredByType[rider.typeKey] = (this.stats.deliveredByType[rider.typeKey] || 0) + 1;
+        this.emit({ type: 'exited', person: rider, compartmentIndex });
       }
     }
   }
 
+  letQueueEnter(queue, dt, isGateHeld) {
+    const person = queue.update(dt, this.door, isGateHeld);
+    if (person) this.emit({ type: 'entered', person, compartmentIndex: person.compartmentIndex });
+  }
+
   updateRiderComfort(dt) {
+    this.stats.secondsSinceComplaint += dt;
+    this.stats.longestCalmSeconds = Math.max(this.stats.longestCalmSeconds, this.stats.secondsSinceComplaint);
     for (const rider of this.door.allRiders()) {
       if (rider.updateComfort(this.door.speed, dt)) this.recordComplaint(rider);
     }
@@ -77,27 +127,45 @@ class Game {
 
   recordComplaint(person) {
     this.complaintCount += 1;
-    // TODO(AC #19): show person.type.complaintLine in a speech bubble above the
-    // person for ~1.5 s. Store it here (e.g. this.speechBubbles) and draw it in render.js.
+    this.stats.complaintsByType[person.typeKey] = (this.stats.complaintsByType[person.typeKey] || 0) + 1;
+    this.stats.secondsSinceComplaint = 0;
+    this.emit({ type: 'complained', person, reason: person.complaintReason });
   }
 
   spawnPeople(dt) {
     this.secondsUntilStreetSpawn -= dt;
     if (this.secondsUntilStreetSpawn <= 0) {
-      this.streetQueue.add(new Person(pickPersonTypeKey('street', this.randomSource()), 'street'));
+      this.addToQueue('street', this.pickTypeKey('street'));
       this.secondsUntilStreetSpawn += this.currentStreetSpawnInterval();
     }
-    // TODO(AC #23): lobby-side spawns, one every LOBBY_SPAWN_INTERVAL seconds, added to
-    // this.lobbyQueue with fromSide 'lobby'. Exiting already works in both directions.
-    // Per SPEC 2.5 only office workers (70%) and couriers (30%) leave from the lobby.
-    // Office workers exist; add the courier (AC #15) first, or every lobby person will be a worker.
+    // SPEC 2.5: only office workers (70%) and couriers (30%) leave from the lobby.
+    this.secondsUntilLobbySpawn -= dt;
+    if (this.secondsUntilLobbySpawn <= 0) {
+      this.addToQueue('lobby', this.pickTypeKey('lobby'));
+      this.secondsUntilLobbySpawn += LOBBY_SPAWN_INTERVAL;
+    }
   }
 
-  /** Seconds between street arrivals right now. */
+  /** Random passenger type for a side. Tests replace this to spawn one type only. */
+  pickTypeKey(side) {
+    return pickPersonTypeKey(side, this.randomSource());
+  }
+
+  /** Puts a new person at the back of a queue. Also used by debug keys and scenarios. */
+  addToQueue(side, typeKey) {
+    const person = new Person(typeKey, side);
+    (side === 'street' ? this.streetQueue : this.lobbyQueue).add(person);
+    this.emit({ type: 'spawned', person });
+    return person;
+  }
+
+  /** Seconds between street arrivals right now: the ramp in SPEC 2.7. */
   currentStreetSpawnInterval() {
-    // TODO(AC #22): return 2.5 after 8:57 and 1.5 after 8:59 (SPEC 2.7).
-    // One game minute = ROUND_DURATION_SECONDS / ROUND_GAME_MINUTES = 36 real seconds.
-    return STREET_SPAWN_INTERVAL;
+    let interval = STREET_SPAWN_RAMP[0].intervalSeconds;
+    for (const step of STREET_SPAWN_RAMP) {
+      if (this.secondsElapsed >= step.fromSecond) interval = step.intervalSeconds;
+    }
+    return interval;
   }
 
   moveExitingPeople(dt) {
@@ -124,14 +192,23 @@ class Game {
   endRound(reason) {
     this.phase = 'ended';
     this.endReason = reason;
+    this.emit({ type: 'roundEnded', reason });
+  }
+
+  /** Game-clock time as { hours, minutes, seconds }. 8:55:00 at the start, 9:00:00 at the end. */
+  clockTime() {
+    const gameSecondsPerRealSecond = (ROUND_GAME_MINUTES * 60) / ROUND_DURATION_SECONDS;
+    const totalSeconds = Math.floor(ROUND_START_MINUTES * 60 + this.secondsElapsed * gameSecondsPerRealSecond + 1e-6);
+    return {
+      hours: Math.floor(totalSeconds / 3600),
+      minutes: Math.floor(totalSeconds / 60) % 60,
+      seconds: totalSeconds % 60,
+    };
   }
 
   /** Clock text like "8:57". Shows 9:00 only when the round is over. */
   clockText() {
-    const secondsPerGameMinute = ROUND_DURATION_SECONDS / ROUND_GAME_MINUTES;
-    const totalMinutes = ROUND_START_MINUTES + Math.floor(this.secondsElapsed / secondsPerGameMinute);
-    const hours = Math.floor(totalMinutes / 60);
-    const minutes = totalMinutes % 60;
+    const { hours, minutes } = this.clockTime();
     return `${hours}:${String(minutes).padStart(2, '0')}`;
   }
 }

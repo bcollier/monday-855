@@ -59,7 +59,7 @@ class Door {
 
   /**
    * Capacity rules from SPEC 2.4: up to 2 people, or exactly 1 person who
-   * takes the whole compartment (the courier, not in the game yet).
+   * takes the whole compartment (the courier).
    */
   canAccept(compartmentIndex, person) {
     const riders = this.compartments[compartmentIndex];
