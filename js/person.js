@@ -116,6 +116,7 @@ class Person {
     // Lifecycle: 'queued' -> 'riding' -> 'exiting' -> removed from the game.
     this.state = 'queued';
     this.compartmentIndex = null;   // set by Door.addRider while riding
+    this.secondsUntilReady = 0;     // still walking up to the line; can't step in until 0
     this.secondsTooSlow = 0;        // how long the door has been below this person's range, in a row
     this.hasComplained = false;     // each person complains at most once (SPEC 2.6)
     this.complaintReason = null;    // 'tooFast' | 'tooSlow' once they have complained

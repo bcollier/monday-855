@@ -117,6 +117,10 @@ class Fx {
       case 'spawned': {
         const visual = this.visualOf(event.person);
         visual.queueDistance = queueArrivalDistance(event.person.fromSide);
+        // Walk so they reach the front spot just as the rules let them step in.
+        visual.arrivalSpeed = event.person.secondsUntilReady > 0
+          ? visual.queueDistance / event.person.secondsUntilReady
+          : QUEUE_WALK_SPEED;
         const start = pointOnQueuePath(event.person.fromSide, visual.queueDistance);
         visual.x = start.x;
         visual.y = start.y;
@@ -163,7 +167,7 @@ class Fx {
         const gap = visual.queueDistance - target;
         let moved = 0;
         if (gap > 0) {
-          const speed = gap > 50 ? QUEUE_WALK_SPEED : 40 + gap * 4.4;
+          const speed = gap > 50 ? (visual.arrivalSpeed ?? QUEUE_WALK_SPEED) : 40 + gap * 4.4;
           moved = Math.min(gap, speed * dt);
           visual.queueDistance -= moved;
         }

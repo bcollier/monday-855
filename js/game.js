@@ -135,13 +135,13 @@ class Game {
   spawnPeople(dt) {
     this.secondsUntilStreetSpawn -= dt;
     if (this.secondsUntilStreetSpawn <= 0) {
-      this.addToQueue('street', this.pickTypeKey('street'));
+      this.addToQueue('street', this.pickTypeKey('street'), ARRIVAL_WALK_SECONDS);
       this.secondsUntilStreetSpawn += this.currentStreetSpawnInterval();
     }
     // SPEC 2.5: only office workers (70%) and couriers (30%) leave from the lobby.
     this.secondsUntilLobbySpawn -= dt;
     if (this.secondsUntilLobbySpawn <= 0) {
-      this.addToQueue('lobby', this.pickTypeKey('lobby'));
+      this.addToQueue('lobby', this.pickTypeKey('lobby'), ARRIVAL_WALK_SECONDS);
       this.secondsUntilLobbySpawn += LOBBY_SPAWN_INTERVAL;
     }
   }
@@ -151,9 +151,13 @@ class Game {
     return pickPersonTypeKey(side, this.randomSource());
   }
 
-  /** Puts a new person at the back of a queue. Also used by debug keys and scenarios. */
-  addToQueue(side, typeKey) {
+  /**
+   * Puts a new person at the back of a queue. Also used by debug keys and scenarios.
+   * walkSeconds: how long until they can step in (0 = already standing in line).
+   */
+  addToQueue(side, typeKey, walkSeconds = 0) {
     const person = new Person(typeKey, side);
+    person.secondsUntilReady = walkSeconds;
     (side === 'street' ? this.streetQueue : this.lobbyQueue).add(person);
     this.emit({ type: 'spawned', person });
     return person;

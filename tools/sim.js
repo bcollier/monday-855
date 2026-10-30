@@ -1,0 +1,61 @@
+// sim.js
+// Plays many rounds with the autopilot (js/autopilot.js) and reports how they went,
+// so balance changes are based on numbers. Run from the repo root:
+//   node tools/sim.js            # 200 rounds each of the careful and sloppy player
+//   node tools/sim.js 500        # more rounds
+// Loads the rule files the same way tests/rules_test.js does: no browser needed.
+const fs = require('fs');
+const vm = require('vm');
+const path = require('path');
+const root = path.join(__dirname, '..');
+const ctx = vm.createContext({ Math, console });
+let code = '';
+for (const f of ['constants', 'door', 'person', 'queue', 'game', 'autopilot']) code += fs.readFileSync(path.join(root, 'js', f + '.js'), 'utf8') + '\n';
+code += 'this.api = { Game, createAutopilot, autopilotControls, FINAL_MINUTE_STARTS_AT, SIMULATION_STEP };';
+vm.runInContext(code, ctx);
+const { Game, createAutopilot, autopilotControls, FINAL_MINUTE_STARTS_AT, SIMULATION_STEP } = ctx.api;
+
+const rounds = Number(process.argv[2]) || 200;
+
+function playRound(styleName) {
+  const game = new Game();
+  const pilot = createAutopilot(styleName);
+  const complaints = [];
+  let finalMinuteQueueSum = 0;
+  let finalMinuteSamples = 0;
+  let maxStreetQueue = 0;
+  while (game.phase === 'playing') {
+    game.update(SIMULATION_STEP, autopilotControls(game, pilot, SIMULATION_STEP));
+    for (const event of game.takeEvents()) {
+      if (event.type === 'complained') complaints.push(`${event.person.typeKey}/${event.reason}`);
+    }
+    maxStreetQueue = Math.max(maxStreetQueue, game.streetQueue.length);
+    if (game.secondsElapsed >= FINAL_MINUTE_STARTS_AT) {
+      finalMinuteQueueSum += game.streetQueue.length;
+      finalMinuteSamples++;
+    }
+  }
+  return {
+    endReason: game.endReason,
+    seconds: game.secondsElapsed,
+    delivered: game.deliveredCount,
+    complaints,
+    maxStreetQueue,
+    finalMinuteQueue: finalMinuteSamples ? finalMinuteQueueSum / finalMinuteSamples : null,
+  };
+}
+
+for (const styleName of ['careful', 'sloppy']) {
+  const results = Array.from({ length: rounds }, () => playRound(styleName));
+  const count = (reason) => results.filter((r) => r.endReason === reason).length;
+  const average = (values) => values.reduce((a, b) => a + b, 0) / Math.max(1, values.length);
+  const complaintKinds = {};
+  for (const r of results) for (const c of r.complaints) complaintKinds[c] = (complaintKinds[c] || 0) + 1;
+  const reachedFinal = results.filter((r) => r.finalMinuteQueue !== null);
+  console.log(`\n${styleName} player, ${rounds} rounds`);
+  console.log(`  made it ${(100 * count('madeIt') / rounds).toFixed(0)}%   fired ${(100 * count('fired') / rounds).toFixed(0)}%   gridlock ${(100 * count('gridlock') / rounds).toFixed(0)}%`);
+  console.log(`  average round ${average(results.map((r) => r.seconds)).toFixed(0)} s, delivered ${average(results.map((r) => r.delivered)).toFixed(1)}`);
+  console.log(`  street line during 8:59: average ${average(reachedFinal.map((r) => r.finalMinuteQueue)).toFixed(1)} (rounds that got there: ${reachedFinal.length})`);
+  console.log(`  longest street line: average ${average(results.map((r) => r.maxStreetQueue)).toFixed(1)}`);
+  console.log('  complaints:', Object.entries(complaintKinds).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${v}`).join(', '));
+}

@@ -7,16 +7,18 @@
 // It never changes the game.
 //
 // Strategy of the careful player:
-//   1. Aim for the middle of everyone's shared comfort range (the meter's SAFE ZONE).
-//      With nobody inside, idle at a gentle speed so people can step in.
+//   1. Plan around everyone riding AND whoever is next in line: aim a little below
+//      the middle of their shared comfort range (the meter's SAFE ZONE). With
+//      nobody around, idle at a gentle speed so people can step in.
 //   2. If no speed works for everyone (NO SAFE SPEED), stay just under the lowest
 //      top speed: a slow complaint takes 1.5 s, a fast one is instant.
-//   3. Hold a gate when the next person would make NO SAFE SPEED, unless that line
-//      is about to gridlock.
+//   3. Hold a gate when the next person would make NO SAFE SPEED, or when the door
+//      is still too fast for them to step in safely, unless that line is about to
+//      gridlock.
 
 const AUTOPILOT_STYLES = {
-  careful: { reactionSeconds: 0.25, usesGates: true, idleSpeed: 50, gridlockMargin: 2 },
-  sloppy: { reactionSeconds: 0.6, usesGates: false, idleSpeed: 80, gridlockMargin: 0 },
+  careful: { reactionSeconds: 0.25, usesGates: true, idleSpeed: 45, gridlockMargin: 2, aimWithinRange: 0.4 },
+  sloppy: { reactionSeconds: 0.6, usesGates: false, idleSpeed: 80, gridlockMargin: 0, aimWithinRange: 0.5 },
 };
 
 function createAutopilot(styleName = 'careful') {
@@ -43,19 +45,40 @@ function autopilotControls(game, pilot, dt) {
 }
 
 function decideAutopilot(game, pilot) {
-  const riders = game.door.allRiders();
-  const calmRiders = riders.filter((rider) => !rider.hasComplained);
-  const shared = sharedComfortRange(calmRiders);
+  const speed = game.door.speed;
+  const calmRiders = game.door.allRiders().filter((rider) => !rider.hasComplained);
+  const fronts = [game.streetQueue.people[0], game.lobbyQueue.people[0]].filter(Boolean);
+  const nearGridlock = (queue) => queue.length >= MAX_QUEUE_LENGTH - pilot.style.gridlockMargin;
+
+  // A shared range narrower than this is as good as none: the door can't hold that steady.
+  const isWorkable = (range) => range && range.max - range.min >= 10;
+
+  // Who should the door suit right now? Riders, plus next-up people who fit with them.
+  const planFor = [...calmRiders];
+  for (const person of fronts) {
+    if (isWorkable(sharedComfortRange([...planFor, person]))) planFor.push(person);
+  }
+  const shared = sharedComfortRange(planFor);
   if (!shared) {
     pilot.targetSpeed = pilot.style.idleSpeed;
   } else if (!shared.isEmpty) {
-    pilot.targetSpeed = (shared.min + shared.max) / 2;
+    const aim = shared.min + (shared.max - shared.min) * pilot.style.aimWithinRange;
+    pilot.targetSpeed = clampSpeed(aim, shared.min + 4, shared.max - 6);
   } else {
     pilot.targetSpeed = Math.min(...calmRiders.map((rider) => rider.type.comfortMaxSpeed)) - 6;
   }
 
-  const wouldConflict = (person) => person && sharedComfortRange([...calmRiders, person]).isEmpty;
-  const nearGridlock = (queue) => queue.length >= MAX_QUEUE_LENGTH - pilot.style.gridlockMargin;
-  pilot.holdStreet = pilot.style.usesGates && wouldConflict(game.streetQueue.people[0]) && !nearGridlock(game.streetQueue);
-  pilot.holdLobby = pilot.style.usesGates && wouldConflict(game.lobbyQueue.people[0]) && !nearGridlock(game.lobbyQueue);
+  const shouldHold = (queue) => {
+    const person = queue.people[0];
+    if (!pilot.style.usesGates || !person || nearGridlock(queue)) return false;
+    const wouldConflict = !isWorkable(sharedComfortRange([...calmRiders, person]));
+    const tooFastToStepIn = speed > person.type.comfortMaxSpeed - 4;
+    return wouldConflict || tooFastToStepIn;
+  };
+  pilot.holdStreet = shouldHold(game.streetQueue);
+  pilot.holdLobby = shouldHold(game.lobbyQueue);
+}
+
+function clampSpeed(speed, min, max) {
+  return max < min ? (min + max) / 2 : Math.max(min, Math.min(max, speed));
 }

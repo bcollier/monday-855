@@ -47,7 +47,7 @@ function handleOneShotKeys() {
   if (ui.showDebug && game.phase === 'playing') {
     const side = isKeyHeld('ShiftLeft') || isKeyHeld('ShiftRight') ? 'lobby' : 'street';
     for (const [code, typeKey] of Object.entries(DEBUG_SPAWN_KEYS)) {
-      if (wasKeyPressed(code)) game.addToQueue(side, typeKey);
+      if (wasKeyPressed(code)) game.addToQueue(side, typeKey, ARRIVAL_WALK_SECONDS);
     }
   }
 }

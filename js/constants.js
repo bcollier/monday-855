@@ -35,6 +35,10 @@ const DOOR_MAX_SPEED = 200;        // °/s hard cap (AC #5)
 // ---- Compartments ----
 const WING_COUNT = 4;
 const COMPARTMENT_CAPACITY = 2;
+const ARRIVAL_WALK_SECONDS = 2;    // a new arrival takes this long to walk up before they can step in.
+                                   // Without it, someone arriving while a compartment is lined up steps
+                                   // straight into a fast door with no chance for the player to react.
+                                   // They count toward gridlock from the moment they arrive.
 const ENTRY_INTERVAL = 0.3;        // s between two people stepping in from the same queue;
                                    // this is what lets a slow door take 2 people and a fast door only 1
 

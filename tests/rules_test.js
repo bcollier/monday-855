@@ -174,6 +174,14 @@ function clearQueues(g) { g.streetQueue.people.length = 0; g.lobbyQueue.people.l
 { const p = new Person('intern', 'street'); p.updateComfort(100, DT); const q = new Person('manager', 'street'); for (let i = 0; i < 100; i++) q.updateComfort(0, DT);
   check('complaint reasons recorded', p.complaintReason === 'tooFast' && q.complaintReason === 'tooSlow'); }
 
+// Arrivals walk up for ARRIVAL_WALK_SECONDS before they can step in
+{ const g = new Game(); g.secondsUntilStreetSpawn = 999; g.secondsUntilLobbySpawn = 999; g.door.angle = 135;
+  g.addToQueue('street', 'officeWorker', 2); run(g, 1.9, none);
+  check('a new arrival cannot step in while still walking up', g.streetQueue.length === 1 && g.door.allRiders().length === 0);
+  run(g, 0.3, none); check('...and steps in once they arrive', g.streetQueue.length === 0 && g.door.compartments[1].length === 1); }
+{ const g = new Game(); g.door.angle = 135; g.secondsUntilLobbySpawn = 999; run(g, 0.05, none);
+  check('spawned people count toward the line immediately', g.streetQueue.length === 1 && g.streetQueue.people[0].secondsUntilReady > 1.9); }
+
 // Shared comfort range (drives the meter's SAFE ZONE / NO SAFE SPEED)
 { const r = (...keys) => sharedComfortRange(keys.map((k) => new Person(k, 'street')));
   check('shared range: nobody -> null', sharedComfortRange([]) === null);

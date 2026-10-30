@@ -23,7 +23,8 @@ class Queue {
   /**
    * Lets the front person step into the door when the rules allow it (SPEC 2.3–2.4):
    * the gate is not held, a compartment is aligned with this opening, it has room,
-   * and at least ENTRY_INTERVAL has passed since the previous person stepped in.
+   * the front person has finished walking up (ARRIVAL_WALK_SECONDS), and at least
+   * ENTRY_INTERVAL has passed since the previous person stepped in.
    * At most one person enters per call. Returns that person, or null.
    *
    * If the front person doesn't fit (e.g. a courier needs an empty compartment),
@@ -31,6 +32,7 @@ class Queue {
    */
   update(dt, door, isGateHeld) {
     this.secondsSinceLastEntry += dt;
+    for (const person of this.people) person.secondsUntilReady = Math.max(0, person.secondsUntilReady - dt);
     if (isGateHeld || this.people.length === 0) return null;
     if (this.secondsSinceLastEntry < ENTRY_INTERVAL) return null;
 
@@ -38,6 +40,7 @@ class Queue {
     if (compartmentIndex === -1) return null;
 
     const frontPerson = this.people[0];
+    if (frontPerson.secondsUntilReady > 0) return null;
     if (!door.canAccept(compartmentIndex, frontPerson)) return null;
 
     this.people.shift();
