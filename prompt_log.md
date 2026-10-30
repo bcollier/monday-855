@@ -125,3 +125,30 @@ Two options were offered: (A) only document it, or (B) add the office worker now
 - **Balance.** The first sim run had both bots fired in every round. Logging each complaint showed a real design hole: arrivals stepped into a fast door on the same frame they appeared, giving the player no time to react. The fix was a 2 s walk-up, recorded in SPEC.md "Tuning changes". The bot was also made smarter (plan for the next person, keep margins). Final result: careful bot 98%, sloppy bot 5–10%.
 - **A tuning decision deferred to the spec owner.** A 1.2 s final-minute arrival interval made the 8:59 crowd feel better. AC #22 names 1.5 s, so it was documented, not changed.
 - **Firefox.** A headless Firefox screenshot came out blank, and then garbled. Copying the canvas into an image showed it renders correctly; the problem was how headless Firefox captures canvases. Safari was not checked.
+
+## 11. Making it addictive
+
+**Prompt (with a screenshot of being fired at 8:55:38, 5 delivered):**
+> ok that play was good keep going. this is going to be the next goose game. the best most addictive door game ever. keep to the spec but we want this to be awesome. do not remove more than 30% of the prior code. we want to keep to the spec as well as adding an element of flare, surprise, fun, qwirky, cute, etc. as the game requires
+
+**What happened:** Claude read the screenshot as a first-30-seconds problem. Getting fired in about 23 s probably meant holding Space too long, so the first fix was readable danger where the player is already looking:
+- the door's hub got a face
+- the rim glows red just before a smack
+- new tips: "short pushes work best", "keep the needle in the green"
+- a strike log on the end screen saying what each strike was for
+
+Then the fun layer, all visual so the rules and spec stay intact. It went in new files (`surprises.js`, `render/extras.js`) with small hooks elsewhere, about 900 lines added and about 40 removed:
+- hops, "+1"s and streak call-outs
+- "CLOSE ONE!" for near misses
+- rare characters with their own complaint lines
+- a pigeon that rides the door
+- passing showers and dogs on the sidewalk
+- a countdown and a 9:00 cheer
+- a doorman rank and best-this-session (memory only, since SPEC §5 rules out saving)
+- Space restarts as well as R, after a 1.2 s delay so a still-held Space can't skip the results
+
+Mistakes caught along the way:
+- the pigeon's flight speed added a per-frame constant (fixed before it ran)
+- the tip card covered the street WAIT sign (moved)
+- a key-cap helper left text centered, so "TO TRY AGAIN" overlapped the SPACE key
+- a stale test harness was missing the new script (rebuilt from `index.html`)

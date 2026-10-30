@@ -53,7 +53,7 @@ Extra flags: `&hold` freezes the rules (animations keep going), `&debug` opens t
 | **↓** (hold) | Street line waits: a belt closes and nobody from the street steps in. |
 | **↑** (hold) | Lobby line waits. |
 | **P** or **Esc** | Pause / unpause. Leaving the browser tab also pauses. |
-| **R** | New round from the end screen. |
+| **R** | New round from the end screen (**Space** works too, after a moment). |
 | **D** | Debug overlay. While it's open, **1–4** add a worker / manager / intern / courier to the street line (hold **Shift** for the lobby line). |
 
 **Goal:** survive from 8:55 to 9:00 (3 real minutes) and deliver as many people as you can.
@@ -74,6 +74,15 @@ A rider complains **immediately** if the door is faster than their range, and af
 - **Rings around riders.** Green: fine. Yellow: too slow, and the ring drains over the 1.5 s before they snap. Red with a storm cloud: has complained.
 - **Warning signs.** The intern's cups wobble as the door nears 60 °/s, the courier's boxes slide near 70, the manager taps their watch when it's too slow, and anyone near their top speed sweats.
 - **Floor spots** in each line turn amber at 6 people and red at 8. The red dashed line is where the 9th person would stand: gridlock.
+- **The door's face.** The hub dozes when nothing's happening, smiles when everyone is comfortable, looks worried while someone's too-slow timer runs, goes wide-eyed (and the rim glows red) when you're about to smack someone, and gets dizzy above 150 °/s.
+
+**Little things to look for** (all visual; none of them change the rules):
+- Happy leavers hop and float a "+1". Runs of happy deliveries get call-outs: SMOOTH!, BUTTERY!, … DOOR WHISPERER! Pull back from someone's top speed just in time for a "CLOSE ONE!".
+- About 1 in 14 arrivals is a rare version of their type: someone in a dinosaur onesie, the birthday cake, a giant ficus, the CEO, the twelve-coffee intern, a courier with a cat. Same comfort range, different complaints.
+- A pigeon sometimes lands on a wing and rides the door. Go above 95 °/s and it leaves in a cloud of feathers.
+- Some rounds get a passing shower. The lobby stays dry.
+- The last five seconds count down, and everyone bounces at 9:00.
+- The end screen gives you a doorman rank and your best this session (kept in memory only; SPEC §5 rules out saving). If you were fired, it lists what each strike was for.
 
 ---
 
@@ -131,6 +140,7 @@ js/queue.js           Queue: one line of waiting people and the rules for steppi
 js/game.js            Game: one round's rules, clock, spawning, exits, complaints, win/lose; emits events
 js/autopilot.js       a simulated player (used by tools/sim.js and #scenario=...&bot)
 js/scenarios.js       the #scenario= moments
+js/surprises.js       visual-only flourishes: rare looks, streaks, rank, the pigeon, rain
 js/fx.js              the visual-only layer: walking, gliding, particles, bubbles, hints, street life
 js/render/art.js      palette, fonts, drawing helpers
 js/render/layout.js   game state -> pixels (door angles, queue paths, exit paths)
@@ -138,6 +148,7 @@ js/render/scene.js    lobby, facade, street (cached), queue lanes, WAIT belts, c
 js/render/doorway.js  the door: floor, wings, glass housing
 js/render/characters.js  the four passenger types, mood rings, warning signs
 js/render/effects.js  floor stains, particles, speech bubbles
+js/render/extras.js   floaters, banners, streak call-outs, pigeon, rain, dogs, countdown
 js/render/meter.js    the speed meter
 js/render/hud.js      delivered, flip clock, strikes, tips, debug overlay
 js/render/screens.js  title, pause, end screens
@@ -184,6 +195,8 @@ main.js runFrame()
 | change arrival rates | `STREET_SPAWN_RAMP`, `LOBBY_SPAWN_INTERVAL` in `constants.js` |
 | change complaint lines | `complaintLines` in `PERSON_TYPES` |
 | change a tip | `HINTS` at the bottom of `fx.js` |
+| add a rare look | `RARE_LOOKS` in `surprises.js` + drawing in `render/characters.js` |
+| change what the door's face does | `doorMood()` / `drawDoorFace()` in `render/doorway.js` |
 | change colors or fonts | `render/art.js` |
 | add a key | `GAME_KEY_CODES` + `readControls()` in `input.js`, one-shot keys in `main.js` |
 

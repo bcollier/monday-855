@@ -238,11 +238,17 @@ function drawEndScreen(ctx, game, fx) {
   // Try again
   const blink = 0.65 + 0.35 * Math.abs(Math.sin(age * 2.6));
   ctx.globalAlpha = blink;
-  drawKeyCap(ctx, CANVAS_WIDTH / 2 - 92, y + height - 48, 30, 'R');
+  const promptX = CANVAS_WIDTH / 2 - 150;
+  drawKeyCap(ctx, promptX, y + height - 48, 30, 'R');
+  ctx.fillStyle = PALETTE.inkSoft;
+  ctx.font = font(11, 'bold', FONT_DISPLAY);
+  ctx.textAlign = 'left';
+  fillSpacedText(ctx, 'OR', promptX + 40, y + height - 34, 1.5);
+  drawKeyCap(ctx, promptX + 68, y + height - 48, 66, 'SPACE');
   ctx.fillStyle = PALETTE.ink;
   ctx.font = font(14, 'bold', FONT_DISPLAY);
-  ctx.textAlign = 'left';
-  fillSpacedText(ctx, 'TO TRY AGAIN', CANVAS_WIDTH / 2 - 50, y + height - 34, 2);
+  ctx.textAlign = 'left';   // drawKeyCap leaves it centered
+  fillSpacedText(ctx, 'TO TRY AGAIN', promptX + 146, y + height - 34, 2);
   ctx.restore();
 }
 

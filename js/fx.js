@@ -274,6 +274,15 @@ class Fx {
         visual.facing = canvasRotationForGameAngle(centerAngle + 90);
         if (visual.spinAge < 0.6) visual.facing += easeOutCubic(visual.spinAge / 0.6) * Math.PI * 2;
         visual.spinAge += dt;
+        // Near miss: the door came within a hair of their top speed and backed off in time.
+        const topSpeed = person.type.comfortMaxSpeed;
+        if (!person.hasComplained && !visual.hadCloseCall) {
+          if (door.speed > topSpeed - 3) visual.isCloseCall = true;
+          else if (visual.isCloseCall && door.speed < topSpeed - 12) {
+            visual.hadCloseCall = true;
+            this.addFloater('CLOSE ONE!', visual.x, visual.y - 22, { color: '#d98a12', size: 13, life: 1.3 });
+          }
+        }
       });
     });
   }

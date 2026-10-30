@@ -41,7 +41,9 @@ function handleOneShotKeys() {
   if (wasKeyPressed('KeyD')) ui.showDebug = !ui.showDebug;
 
   if (game.phase === 'title' && wasKeyPressed('Space')) game.start();
-  else if (game.phase === 'ended' && wasKeyPressed('KeyR')) game.reset();
+  // R restarts (AC #26). Space does too once the end screen has had a moment, so a
+  // still-mashed Space can't skip the results.
+  else if (game.phase === 'ended' && (wasKeyPressed('KeyR') || (wasKeyPressed('Space') && fx.endScreenAge > 1.2))) game.reset();
   else if (wasKeyPressed('KeyP') || wasKeyPressed('Escape')) game.togglePause();
 
   if (ui.showDebug && game.phase === 'playing') {
