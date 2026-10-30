@@ -19,7 +19,10 @@ const PERSON_TYPES = {
     streetSpawnWeight: 55,
     lobbySpawnWeight: 70,
     takesWholeCompartment: false,
-    complaintLine: 'WATCH IT!',
+    complaintLines: {
+      tooFast: ['WATCH IT!', 'MY PHONE!', 'I JUST GOT THIS SHIRT!'],
+      tooSlow: ['ANY DAY NOW...', 'I HAVE A STANDUP!', 'IS IT BROKEN?'],
+    },
   },
   // The Late manager and the Coffee intern are the CORE CONFLICT of the game (SPEC 2.5):
   // their comfort ranges do not overlap, so no door speed keeps both of them happy.
@@ -32,18 +35,24 @@ const PERSON_TYPES = {
     streetSpawnWeight: 20,  // relative weights, not percentages; only the ratio matters
     lobbySpawnWeight: 0,
     takesWholeCompartment: false,
-    complaintLine: 'I HAVE A 9 AM!',
+    complaintLines: {
+      tooFast: ['MY HAIR!', 'DO YOU KNOW WHO I AM?', 'THIS SUIT IS ITALIAN!'],
+      tooSlow: ['I HAVE A 9 AM!', 'TIME IS MONEY!', 'IS THIS DOOR UNIONIZED?'],
+    },
   },
   intern: {
     displayName: 'Coffee intern',
     label: 'I',
-    color: '#b8742a',
+    color: '#d9a12b',
     comfortMinSpeed: 20,
     comfortMaxSpeed: 60,
     streetSpawnWeight: 15,
     lobbySpawnWeight: 0,
     takesWholeCompartment: false,
-    complaintLine: 'MY LATTE!',
+    complaintLines: {
+      tooFast: ['MY LATTE!', 'THAT WAS SIX ORDERS!', 'OAT MILK EVERYWHERE!'],
+      tooSlow: ['THE FOAM IS DYING!', "THEY'RE GETTING COLD!", 'MY BOSS IS WAITING!'],
+    },
   },
   // The courier's cart fills a whole compartment (SPEC 2.4). A courier at the front
   // of a queue waits for an EMPTY compartment, and so does everyone behind them.
@@ -56,7 +65,10 @@ const PERSON_TYPES = {
     streetSpawnWeight: 10,
     lobbySpawnWeight: 30,
     takesWholeCompartment: true,
-    complaintLine: 'MY PACKAGES!',
+    complaintLines: {
+      tooFast: ['MY PACKAGES!', 'THAT SAID FRAGILE!', 'SIGN FOR THAT, I DARE YOU'],
+      tooSlow: ["I'M PAID PER STOP!", 'COME ON, COME ON...', "I'M DOUBLE-PARKED!"],
+    },
   },
 };
 
@@ -74,6 +86,19 @@ function pickPersonTypeKey(side, randomNumber) {
     if (remaining < 0) return key;
   }
   return typeKeys[typeKeys.length - 1];
+}
+
+/**
+ * The door speeds that keep EVERY one of these people comfortable: the overlap of
+ * their comfort ranges, as { min, max }. Returns null when nobody is given, and
+ * { min, max, isEmpty: true } when no speed works for all of them (e.g. a manager
+ * and an intern). The speed meter's SAFE ZONE and NO SAFE SPEED come from this.
+ */
+function sharedComfortRange(people) {
+  if (people.length === 0) return null;
+  const min = Math.max(...people.map((p) => p.type.comfortMinSpeed));
+  const max = Math.min(...people.map((p) => p.type.comfortMaxSpeed));
+  return { min, max, isEmpty: min > max };
 }
 
 let nextPersonId = 1;

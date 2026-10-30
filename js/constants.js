@@ -11,8 +11,10 @@ const DOOR_CENTER_X = 480;
 const DOOR_CENTER_Y = 320;
 const DOOR_RADIUS = 110;
 const PERSON_RADIUS = 9;
-const QUEUE_SPACING = 20;          // center-to-center gap in a queue; small enough that 9 people fit on screen
+const QUEUE_SPACING = 28;          // center-to-center gap between people in a queue
 const QUEUE_GAP_FROM_DOOR = 30;    // the front person stands this far outside the door circle
+const QUEUE_TURN_AFTER_SPOTS = 3;  // each line runs straight out of its opening for 3 spots, then turns
+                                   // sideways (street line to the right, lobby line to the left)
 const EXIT_LANE_OFFSET_X = 34;     // exiting people walk beside the queue, not through it
 const EXIT_WALK_SPEED = 120;       // px/s for people walking away after they leave the door
 
@@ -45,6 +47,7 @@ const MAX_QUEUE_LENGTH = 8;        // MORE than this many people waiting on one 
 const ROUND_DURATION_SECONDS = 180;        // real seconds for 8:55 -> 9:00
 const ROUND_START_MINUTES = 8 * 60 + 55;   // 8:55 expressed in minutes after midnight
 const ROUND_GAME_MINUTES = 5;
+const FINAL_MINUTE_STARTS_AT = ROUND_DURATION_SECONDS * (ROUND_GAME_MINUTES - 1) / ROUND_GAME_MINUTES;  // 8:59 = 144 s
 
 // ---- Spawning ----
 // Street arrivals speed up as 9:00 approaches (SPEC 2.7). One game minute = 36 real

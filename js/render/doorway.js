@@ -1,0 +1,165 @@
+// render/doorway.js
+// The revolving door, the hero of the screen. Drawn in three layers so the
+// riders can sit between them:
+//   drawDoorFloor   - floor disc and mat (under everyone)
+//   drawDoorWings   - the four glass wings, with motion trails at speed
+//   drawDoorHousing - brass rim and the curved glass walls on the left and right
+// The four wings, the two walls and the two openings must stay obvious under
+// the art (AC #2), so the wings are dark-edged and the walls are bright.
+
+function drawDoorFloor(ctx) {
+  const x = DOOR_CENTER_X;
+  const y = DOOR_CENTER_Y;
+  // Stone floor disc with a soft inner ring
+  fillCircle(ctx, x, y, DOOR_RADIUS + 3, '#d9d2c4');
+  fillCircle(ctx, x, y, DOOR_RADIUS, '#f4efe4');
+  fillCircle(ctx, x, y, DOOR_RADIUS * 0.84, '#ece4d5');
+  fillCircle(ctx, x, y, DOOR_RADIUS * 0.8, '#f4efe4');
+
+  // Brass thresholds at the two openings: where people step in and out.
+  ctx.strokeStyle = PALETTE.brass;
+  ctx.lineWidth = 3;
+  for (const openingAngle of [LOBBY_OPENING_ANGLE, STREET_OPENING_ANGLE]) {
+    const halfWidth = ((90 - HOUSING_HALF_WIDTH) * Math.PI) / 180;
+    const center = canvasRotationForGameAngle(openingAngle);
+    ctx.beginPath();
+    ctx.arc(x, y, DOOR_RADIUS + 1, center - halfWidth, center + halfWidth);
+    ctx.stroke();
+  }
+}
+
+/** Faint wedge highlighting the compartment lined up with each opening: "people step in here". */
+function drawAlignedCompartmentGlow(ctx, door, time) {
+  for (const openingAngle of [LOBBY_OPENING_ANGLE, STREET_OPENING_ANGLE]) {
+    const compartment = door.findAlignedCompartment(openingAngle);
+    if (compartment === -1) continue;
+    const center = door.compartmentCenterAngle(compartment);
+    const start = canvasRotationForGameAngle(center + 45);
+    const end = canvasRotationForGameAngle(center - 45);
+    ctx.save();
+    ctx.globalAlpha = 0.16 + 0.05 * Math.sin(time * 6);
+    ctx.fillStyle = '#ffe7a6';
+    ctx.beginPath();
+    ctx.moveTo(DOOR_CENTER_X, DOOR_CENTER_Y);
+    ctx.arc(DOOR_CENTER_X, DOOR_CENTER_Y, DOOR_RADIUS - 3, start, end);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+function drawDoorWings(ctx, angle, speed) {
+  // Motion trails: ghost wings behind the real ones once the door is really moving.
+  const trailStrength = clamp((speed - 100) / 100, 0, 1);
+  if (trailStrength > 0) {
+    for (let k = 1; k <= 4; k++) {
+      ctx.save();
+      ctx.globalAlpha = 0.11 * trailStrength * (1 - k / 5);
+      for (let i = 0; i < WING_COUNT; i++) drawWing(ctx, angle + i * 90 - k * speed * 0.016, true);
+      ctx.restore();
+    }
+  }
+
+  // Flat shadows first (sun from the lower left), then the wings.
+  for (let i = 0; i < WING_COUNT; i++) {
+    const tip = pointAroundDoor(angle + i * 90, DOOR_RADIUS - 3);
+    ctx.strokeStyle = PALETTE.shadow;
+    ctx.lineWidth = 7;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(DOOR_CENTER_X + SHADOW_OFFSET.x * 0.6, DOOR_CENTER_Y + SHADOW_OFFSET.y * 0.6);
+    ctx.lineTo(tip.x + SHADOW_OFFSET.x * 0.6, tip.y + SHADOW_OFFSET.y * 0.6);
+    ctx.stroke();
+  }
+  for (let i = 0; i < WING_COUNT; i++) drawWing(ctx, angle + i * 90, false);
+
+  // Brass hub with a turning glint
+  fillCircle(ctx, DOOR_CENTER_X + 2, DOOR_CENTER_Y - 2, 13, PALETTE.shadow);
+  fillCircle(ctx, DOOR_CENTER_X, DOOR_CENTER_Y, 12, PALETTE.brassDark);
+  fillCircle(ctx, DOOR_CENTER_X, DOOR_CENTER_Y, 10, PALETTE.brass);
+  const glint = pointAroundDoor(angle + 135, 5);
+  fillCircle(ctx, glint.x, glint.y, 3, PALETTE.brassLight);
+  fillCircle(ctx, DOOR_CENTER_X, DOOR_CENTER_Y, 3, PALETTE.brassDark);
+}
+
+/** One glass wing: brass-edged glass panel with a push bar. */
+function drawWing(ctx, wingAngle, isGhost) {
+  const start = pointAroundDoor(wingAngle, 11);
+  const tip = pointAroundDoor(wingAngle, DOOR_RADIUS - 3);
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = isGhost ? PALETTE.glassEdge : '#3d4250';
+  ctx.lineWidth = 7;
+  ctx.beginPath();
+  ctx.moveTo(start.x, start.y);
+  ctx.lineTo(tip.x, tip.y);
+  ctx.stroke();
+  if (isGhost) return;
+  ctx.strokeStyle = PALETTE.glassSolid;
+  ctx.lineWidth = 3.5;
+  ctx.beginPath();
+  ctx.moveTo(start.x, start.y);
+  ctx.lineTo(tip.x, tip.y);
+  ctx.stroke();
+  // Brass push bar across the middle of the panel
+  const barCenter = pointAroundDoor(wingAngle, DOOR_RADIUS * 0.62);
+  const across = ((wingAngle + 90) * Math.PI) / 180;
+  const dx = Math.cos(across) * 6;
+  const dy = -Math.sin(across) * 6;
+  ctx.strokeStyle = PALETTE.brass;
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.moveTo(barCenter.x - dx, barCenter.y - dy);
+  ctx.lineTo(barCenter.x + dx, barCenter.y + dy);
+  ctx.stroke();
+  // Brass cap at the tip
+  fillCircle(ctx, tip.x, tip.y, 3.2, PALETTE.brass);
+}
+
+/** Brass rim and the curved glass walls. A bright reflection slides along each wall now and then. */
+function drawDoorHousing(ctx, time) {
+  const x = DOOR_CENTER_X;
+  const y = DOOR_CENTER_Y;
+  const wallHalfWidth = (HOUSING_HALF_WIDTH * Math.PI) / 180;
+  for (const wallCenter of [0, Math.PI]) {
+    const from = wallCenter - wallHalfWidth;
+    const to = wallCenter + wallHalfWidth;
+    // Shadow
+    ctx.strokeStyle = PALETTE.shadow;
+    ctx.lineWidth = 12;
+    ctx.beginPath();
+    ctx.arc(x + SHADOW_OFFSET.x, y + SHADOW_OFFSET.y, DOOR_RADIUS + 7, from, to);
+    ctx.stroke();
+    // Brass frame
+    ctx.strokeStyle = PALETTE.brassDark;
+    ctx.lineWidth = 12;
+    ctx.beginPath();
+    ctx.arc(x, y, DOOR_RADIUS + 7, from, to);
+    ctx.stroke();
+    // Glass
+    ctx.strokeStyle = '#a9d3e8';
+    ctx.lineWidth = 8;
+    ctx.beginPath();
+    ctx.arc(x, y, DOOR_RADIUS + 7, from + 0.02, to - 0.02);
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(x, y, DOOR_RADIUS + 5, from + 0.05, to - 0.05);
+    ctx.stroke();
+    // Moving reflection
+    const sweep = ((time * 0.35 + (wallCenter ? 0.5 : 0)) % 1.6) / 1.2;
+    if (sweep < 1) {
+      const center = from + (to - from) * sweep;
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.95)';
+      ctx.lineWidth = 6;
+      ctx.beginPath();
+      ctx.arc(x, y, DOOR_RADIUS + 7, Math.max(from, center - 0.06), Math.min(to, center + 0.06));
+      ctx.stroke();
+    }
+    // Brass end caps where the walls meet the openings
+    for (const end of [from, to]) {
+      fillCircle(ctx, x + Math.cos(end) * (DOOR_RADIUS + 7), y + Math.sin(end) * (DOOR_RADIUS + 7), 6.5, PALETTE.brass);
+      fillCircle(ctx, x + Math.cos(end) * (DOOR_RADIUS + 7) - 1, y + Math.sin(end) * (DOOR_RADIUS + 7) - 1, 2.5, PALETTE.brassLight);
+    }
+  }
+}

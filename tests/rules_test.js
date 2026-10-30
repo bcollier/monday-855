@@ -12,9 +12,9 @@ const root = path.join(__dirname, '..');
 const ctx = vm.createContext({ Math, console });
 let code = '';
 for (const f of ['constants', 'door', 'person', 'queue', 'game']) code += fs.readFileSync(path.join(root, 'js', f + '.js'), 'utf8') + '\n';
-code += 'this.api = { Game, Door, Person, Queue, PERSON_TYPES, angleDistance, pickPersonTypeKey };';
+code += 'this.api = { Game, Door, Person, Queue, PERSON_TYPES, angleDistance, pickPersonTypeKey, sharedComfortRange };';
 vm.runInContext(code, ctx);
-const { Game, Door, Person, PERSON_TYPES, angleDistance, pickPersonTypeKey } = ctx.api;
+const { Game, Door, Person, PERSON_TYPES, angleDistance, pickPersonTypeKey, sharedComfortRange } = ctx.api;
 
 let failures = 0;
 function check(name, cond, extra = '') { console.log((cond ? 'PASS ' : 'FAIL ') + name + (extra ? '  [' + extra + ']' : '')); if (!cond) failures++; }
@@ -173,6 +173,12 @@ function clearQueues(g) { g.streetQueue.people.length = 0; g.lobbyQueue.people.l
   check('events: exited', seen.has('exited')); }
 { const p = new Person('intern', 'street'); p.updateComfort(100, DT); const q = new Person('manager', 'street'); for (let i = 0; i < 100; i++) q.updateComfort(0, DT);
   check('complaint reasons recorded', p.complaintReason === 'tooFast' && q.complaintReason === 'tooSlow'); }
+
+// Shared comfort range (drives the meter's SAFE ZONE / NO SAFE SPEED)
+{ const r = (...keys) => sharedComfortRange(keys.map((k) => new Person(k, 'street')));
+  check('shared range: nobody -> null', sharedComfortRange([]) === null);
+  check('shared range: worker + intern = 30-60', r('officeWorker', 'intern').min === 30 && r('officeWorker', 'intern').max === 60 && !r('officeWorker', 'intern').isEmpty);
+  check('shared range: manager + intern is empty (AC14)', r('manager', 'intern').isEmpty); }
 
 // Clock seconds and stats
 { const g = new Game(); g.secondsElapsed = 90; const c = g.clockTime();

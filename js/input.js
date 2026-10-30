@@ -3,13 +3,13 @@
 // game logic receives a plain "controls" object from readControls(), which is
 // also what makes Game.update() easy to drive from tests.
 
-const GAME_KEY_CODES = new Set(['Space', 'ArrowUp', 'ArrowDown', 'KeyR']);
+// Keys the browser should not act on itself (Space and arrows would scroll the page).
+const GAME_KEY_CODES = new Set(['Space', 'ArrowUp', 'ArrowDown', 'KeyR', 'KeyP', 'KeyD', 'Escape']);
 
 const heldKeyCodes = new Set();      // keys currently held down
 const pressedKeyCodes = new Set();   // keys pressed since the last endInputFrame() (one-shot actions)
 
 window.addEventListener('keydown', (event) => {
-  // Stop Space/arrows from scrolling the page while playing.
   if (GAME_KEY_CODES.has(event.code)) event.preventDefault();
   if (!event.repeat) pressedKeyCodes.add(event.code);
   heldKeyCodes.add(event.code);
@@ -39,10 +39,11 @@ function wasKeyPressed(code) {
   return pressedKeyCodes.has(code);
 }
 
+function isKeyHeld(code) {
+  return heldKeyCodes.has(code);
+}
+
 /** Call once at the end of every frame so one-shot presses don't carry over. */
 function endInputFrame() {
   pressedKeyCodes.clear();
 }
-
-// TODO(AC #27): 'KeyD' toggles the debug overlay. TODO(AC #31): 'KeyP' pauses.
-// Add them to GAME_KEY_CODES and handle them in main.js with wasKeyPressed().
