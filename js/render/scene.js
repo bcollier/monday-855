@@ -86,7 +86,7 @@ function paintLobby(ctx, random) {
 
   paintElevators(ctx, 0, 96, 1);
   paintElevators(ctx, CANVAS_WIDTH, 118, -1);
-  paintReceptionDesk(ctx, 790, 215);
+  paintReceptionDesk(ctx, 800, 168);
   paintPlant(ctx, 92, 262, 22);
   paintPlant(ctx, 352, 248, 17);
   paintPlant(ctx, 612, 252, 17);
@@ -97,56 +97,82 @@ function paintLobby(ctx, random) {
 
 /** Brass elevator doors set into a side wall. side = 1 for the left wall, -1 for the right. */
 function paintElevators(ctx, wallX, centerY, side) {
-  const depth = 14;
-  ctx.fillStyle = PALETTE.facade;
-  ctx.fillRect(side > 0 ? 0 : wallX - depth, centerY - 40, depth, 80);
-  ctx.fillStyle = PALETTE.brass;
-  ctx.fillRect(side > 0 ? 4 : wallX - depth + 2, centerY - 30, 8, 60);
+  const depth = 16;
+  const left = side > 0 ? 0 : wallX - depth;
+  // Wall niche, then two brass door leaves with a seam
+  fillRoundRect(ctx, left - 4, centerY - 38, depth + 8, 76, 4, PALETTE.facade);
   ctx.fillStyle = PALETTE.brassDark;
-  ctx.fillRect(side > 0 ? 4 : wallX - depth + 2, centerY - 1, 8, 2);
-  // Floor indicator lamp above the doors
-  fillCircle(ctx, side > 0 ? 8 : wallX - 8, centerY - 35, 2.5, '#ffcf5a');
+  ctx.fillRect(left + (side > 0 ? 4 : 2), centerY - 30, depth - 6, 60);
+  ctx.fillStyle = PALETTE.brass;
+  ctx.fillRect(left + (side > 0 ? 5 : 3), centerY - 29, depth - 8, 28);
+  ctx.fillRect(left + (side > 0 ? 5 : 3), centerY + 1, depth - 8, 28);
+  ctx.fillStyle = 'rgba(255, 240, 200, 0.6)';
+  ctx.fillRect(left + (side > 0 ? 6 : 4), centerY - 27, 2, 24);
+  // Floor rug in front of the doors
+  ctx.fillStyle = 'rgba(122, 75, 44, 0.18)';
+  ctx.fillRect(side > 0 ? depth : wallX - depth - 26, centerY - 30, 26, 60);
+  // Lit up/down arrow above
+  const arrowX = side > 0 ? depth + 12 : wallX - depth - 12;
+  fillCircle(ctx, arrowX, centerY - 34, 6, PALETTE.facade);
+  ctx.fillStyle = '#ffcf5a';
+  ctx.beginPath();
+  ctx.moveTo(arrowX, centerY - 38);
+  ctx.lineTo(arrowX + 3.5, centerY - 32);
+  ctx.lineTo(arrowX - 3.5, centerY - 32);
+  ctx.closePath();
+  ctx.fill();
 }
 
 function paintReceptionDesk(ctx, x, y) {
-  // Shadow, then a curved wooden desk with a brass edge.
+  // A curved counter bulging toward the door, the receptionist behind it.
+  const radius = 64;
+  const from = Math.PI * 0.12;
+  const to = Math.PI * 0.88;
   ctx.save();
-  ctx.translate(x, y);
-  ctx.fillStyle = PALETTE.shadow;
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = PALETTE.shadow;
+  ctx.lineWidth = 22;
   ctx.beginPath();
-  ctx.ellipse(SHADOW_OFFSET.x, SHADOW_OFFSET.y, 92, 34, 0, Math.PI, Math.PI * 2);
-  ctx.lineTo(92 + SHADOW_OFFSET.x, 12 + SHADOW_OFFSET.y);
-  ctx.lineTo(-92 + SHADOW_OFFSET.x, 12 + SHADOW_OFFSET.y);
-  ctx.fill();
-
-  ctx.fillStyle = PALETTE.wood;
+  ctx.arc(x + SHADOW_OFFSET.x, y + SHADOW_OFFSET.y, radius, from, to);
+  ctx.stroke();
+  ctx.strokeStyle = PALETTE.wood;
+  ctx.lineWidth = 22;
   ctx.beginPath();
-  ctx.ellipse(0, 0, 92, 34, 0, Math.PI, Math.PI * 2);
-  ctx.lineTo(92, 12);
-  ctx.lineTo(-92, 12);
-  ctx.closePath();
-  ctx.fill();
-  ctx.fillStyle = PALETTE.woodLight;
+  ctx.arc(x, y, radius, from, to);
+  ctx.stroke();
+  ctx.strokeStyle = PALETTE.woodLight;
+  ctx.lineWidth = 12;
   ctx.beginPath();
-  ctx.ellipse(0, 0, 78, 22, 0, Math.PI, Math.PI * 2);
-  ctx.lineTo(78, 6);
-  ctx.lineTo(-78, 6);
-  ctx.closePath();
-  ctx.fill();
+  ctx.arc(x, y, radius - 2, from + 0.03, to - 0.03);
+  ctx.stroke();
   ctx.strokeStyle = PALETTE.brassLight;
   ctx.lineWidth = 1.5;
   ctx.beginPath();
-  ctx.ellipse(0, 0, 92, 34, 0, Math.PI, Math.PI * 2);
+  ctx.arc(x, y, radius + 11, from + 0.02, to - 0.02);
   ctx.stroke();
-
-  // Monitor, lamp and a little "LOBBY" sign
-  fillRoundRect(ctx, -30, -18, 24, 5, 2, '#22252c');
-  fillCircle(ctx, 40, -10, 7, '#f1d68f');
-  fillCircle(ctx, 40, -10, 3, '#fff6d6');
-  fillRoundRect(ctx, -6, -6, 14, 8, 2, '#f7f3ea');
-  // Receptionist (seen from above, facing the door)
-  fillEllipse(ctx, -8, -38, 11, 7, 0, '#6b4f7a');
-  fillCircle(ctx, -8, -37, 5.5, '#3b2a22');
+  // Things on the counter: monitor, lamp, bell, sign-in book
+  const at = (angle, distance) => ({ x: x + Math.cos(angle) * distance, y: y + Math.sin(angle) * distance });
+  const monitor = at(Math.PI * 0.62, radius - 2);
+  ctx.save();
+  ctx.translate(monitor.x, monitor.y);
+  ctx.rotate(Math.PI * 0.12);
+  fillRoundRect(ctx, -11, -2.5, 22, 5, 2, '#22252c');
+  ctx.restore();
+  const lamp = at(Math.PI * 0.25, radius - 2);
+  fillCircle(ctx, lamp.x, lamp.y, 6.5, PALETTE.brassLight);
+  fillCircle(ctx, lamp.x, lamp.y, 3, '#fff6d6');
+  const book = at(Math.PI * 0.45, radius - 2);
+  fillRoundRect(ctx, book.x - 6, book.y - 4, 12, 8, 1.5, '#f7f3ea');
+  ctx.fillStyle = 'rgba(31,36,48,0.3)';
+  ctx.fillRect(book.x - 0.5, book.y - 4, 1, 8);
+  const bell = at(Math.PI * 0.78, radius - 2);
+  fillCircle(ctx, bell.x, bell.y, 3.5, PALETTE.brass);
+  // Receptionist and chair, facing the door
+  fillCircle(ctx, x + 2, y + 14, 12, '#3d4250');
+  fillEllipse(ctx, x, y + 26, 7.5, 12, Math.PI / 2, '#6b4f7a');
+  fillCircle(ctx, x, y + 27, 5.8, '#3b2a22');
+  fillCircle(ctx, x, y + 29.5, 4.2, '#c98b62');
+  fillCircle(ctx, x, y + 26.5, 5.2, '#3b2a22');
   ctx.restore();
 }
 
@@ -279,10 +305,6 @@ function paintCoffeeCart(ctx, x, y) {
     ctx.fill();
   }
   fillCircle(ctx, x + 6, y - 4, 3, PALETTE.brass);
-  ctx.fillStyle = PALETTE.ink;
-  ctx.font = font(8, 'bold', FONT_DISPLAY);
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
 }
 
 function paintTree(ctx, x, y, radius) {
@@ -352,8 +374,9 @@ function drawQueueLane(ctx, queue, time) {
       ctx.font = font(8, 'bold', FONT_DISPLAY);
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      // Label on the inner side of the turn, away from the sidewalk traffic
-      fillSpacedText(ctx, 'GRIDLOCK', point.x + (side === 'street' ? 8 : -8), point.y - halfWidth - 8, 1.5);
+      // Label on open floor: above the street lane (away from sidewalk traffic), below the lobby lane
+      const labelY = side === 'street' ? point.y - halfWidth - 8 : point.y + halfWidth + 9;
+      fillSpacedText(ctx, 'GRIDLOCK', point.x + (side === 'street' ? 8 : -8), labelY, 1.5);
       ctx.restore();
       continue;
     }

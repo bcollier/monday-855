@@ -69,7 +69,7 @@ function drawFlipClock(ctx, game, fx) {
     ctx.scale(1 + beat * 0.05, 1 + beat * 0.05);
     ctx.translate(-centerX, -(cardTop + 28));
   }
-  drawCard(ctx, centerX - panelWidth / 2, cardTop, panelWidth, 58, {
+  drawCard(ctx, centerX - panelWidth / 2, cardTop, panelWidth, 64, {
     fill: isFinalMinute ? '#5a1f22' : PALETTE.ink,
     border: false,
     radius: 10,
@@ -85,7 +85,7 @@ function drawFlipClock(ctx, game, fx) {
       fillCircle(ctx, cursor + width / 2, cardTop + 22, 2.6, ctx.fillStyle);
       fillCircle(ctx, cursor + width / 2, cardTop + 36, 2.6, ctx.fillStyle);
     } else {
-      drawFlipDigit(ctx, cursor, cardTop + 8, width, digitHeight, character, fromCharacters[i], fx.clockFlip.age, isFinalMinute);
+      drawFlipDigit(ctx, cursor, cardTop + 7, width, digitHeight, character, fromCharacters[i], fx.clockFlip.age, isFinalMinute);
     }
     cursor += width + 4;
   });
@@ -98,19 +98,19 @@ function drawFlipClock(ctx, game, fx) {
   ctx.font = font(8, 'bold', FONT_DISPLAY);
   ctx.fillStyle = isFinalMinute ? '#ffb3ad' : PALETTE.brassLight;
   fillSpacedText(ctx, 'MON', cursor + 4, cardTop + 20, 1.5);
-  ctx.restore();
 
-  // Round progress under the clock, with marks where arrivals speed up (8:57, 8:59)
-  const barWidth = 150;
+  // Round progress along the bottom of the card, with ticks where arrivals speed up (8:57, 8:59)
+  const barWidth = panelWidth - 24;
   const barX = centerX - barWidth / 2;
-  const barY = cardTop + 64;
+  const barY = cardTop + 55;
   const progress = game.secondsElapsed / ROUND_DURATION_SECONDS;
-  fillRoundRect(ctx, barX, barY, barWidth, 5, 2.5, 'rgba(31, 36, 48, 0.18)');
-  fillRoundRect(ctx, barX, barY, Math.max(5, barWidth * progress), 5, 2.5, isFinalMinute ? PALETTE.danger : PALETTE.brass);
+  fillRoundRect(ctx, barX, barY, barWidth, 4, 2, 'rgba(251, 246, 236, 0.18)');
+  fillRoundRect(ctx, barX, barY, Math.max(4, barWidth * progress), 4, 2, isFinalMinute ? '#ff8a80' : PALETTE.brass);
   for (const step of STREET_SPAWN_RAMP.slice(1)) {
     const markX = barX + (step.fromSecond / ROUND_DURATION_SECONDS) * barWidth;
-    fillRoundRect(ctx, markX - 1, barY - 2, 2, 9, 1, PALETTE.ink);
+    fillRoundRect(ctx, markX - 1, barY - 2, 2, 8, 1, PALETTE.paper);
   }
+  ctx.restore();
 }
 
 /**
