@@ -85,6 +85,8 @@ A rider complains **immediately** if the door is faster than their range, and af
 - **Speed meter (bottom left).** The needle is the door's speed. Each type has a lane showing its range: solid when someone of that type is riding, with one dot per rider in their mood color; dashed **NEXT** when they're at the front of a line; faint otherwise. The green **SAFE ZONE** is the speed that suits everyone riding. Red stripes and **NO SAFE SPEED** mean there isn't one.
 - **Rings around riders.** Green: fine. Yellow: too slow, and the ring drains over the 1.5 s before they snap. Red with a storm cloud: has complained.
 - **Warning signs.** The intern's cups wobble as the door nears 60 °/s, the courier's boxes slide near 70, the manager taps their watch when it's too slow, and anyone near their top speed sweats.
+- **SLOWER / FASTER tags** over a rider who is about to complain: red ▼ SLOWER within 12 °/s of their top speed, amber ▲ FASTER while their too-slow timer runs.
+- **When a strike happens**, the complaint bubble is stamped TOO FAST, TOO SLOW or GOT IN, and a card under the STRIKES counter says who, why (their range against the door's speed) and what to do instead.
 - **Floor spots** in each line turn amber at 6 people and red at 8. The red dashed line is where the 9th person would stand: gridlock.
 - **The door's face.** The hub dozes when nothing's happening, smiles when everyone is comfortable, looks worried while someone's too-slow timer runs, goes wide-eyed (and the rim glows red) when you're about to smack someone, and gets dizzy above 150 °/s.
 
@@ -122,7 +124,7 @@ All 31 criteria in SPEC.md §3 are met in **Classic** mode (Space on the title s
 | 16 | Met | Tested. |
 | 17 | Met | Tested. |
 | 18 | Met | Tested (once only) and seen (red ring + cloud). |
-| 19 | Met | Seen. Speech bubble with a line per type and cause; a pink slip gets stamped. |
+| 19 | Met | Seen. Speech bubble with a line per type and cause, stamped TOO FAST / TOO SLOW; a pink slip gets stamped, and a card explains the strike. |
 | 20 | Met | Seen. Green ring, yellow draining ring. |
 | 21 | Met | Tested (180.00 s). A full round in the browser harness was 10,800 frames at 60 fps. |
 | 22 | Met (amended) | Tested, measured in a real round: 4.00 / 2.50 / 1.20 s. The 8:59 interval was tuned from 1.5 s to 1.2 s (SPEC.md, "Tuning changes"). |

@@ -189,3 +189,18 @@ Mistakes caught along the way:
 **What happened:** Claude ran the sim first. The careful bot made it 99% of the time and the sloppy bot was fired at about 8:57, so the game was too easy for a skilled player and too harsh for a new one, and 8:59 wasn't crowded. It proposed four changes: a calmer opening (an arrival mix per part of the round), more couriers and conflict at 8:59, a lobby rush at 8:59, and 1.2 s at 8:59 (amending AC #22). It swept about 15 variants with a scratch script before picking one. The harder 8:59 dropped Rush to 40%, so troublemakers now stop arriving at about 8:59:20.
 
 Result: careful 79% in Classic and 70% in Rush. The sloppy bot reaches 8:59 in 85% of rounds, up from 47%. The 8:59 street line went from 2.3 to 3.4 people. The 4–6 target was missed; SPEC.md "Tuning changes" says why.
+
+## 14. "It's not clear what I'm doing wrong"
+
+**Prompts:**
+> i still haven't beet the game its hard and I don't know when i am getting these complaints it's not clear what I'm doing wrong
+
+> also I let lots of bad guys in and din't get complainsts?
+
+**What happened:** Claude first checked the rules in the browser: a troublemaker getting in *was* a strike, but it only filled a slip labelled "COMPLAINTS", so it looked like a random complaint. The fix was to explain every strike when it happens:
+- a card under the counter, now labelled STRIKES: "STRIKE 1 OF 3: TOO FAST · Coffee intern: 63 °/s, over their max of 60 · Let go of SPACE sooner while they ride"
+- a TOO FAST / TOO SLOW / GOT IN stamp on each complaint bubble
+- ▼ SLOWER / ▲ FASTER tags over riders *before* they complain, since a too-fast complaint is instant
+- rare looks named with their type on the end screen ("The CEO (Late manager)")
+
+Also fixed: the end screen could show "4 / 3" when two riders complained on the same frame.

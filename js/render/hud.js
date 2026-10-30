@@ -199,7 +199,7 @@ function drawStrikes(ctx, game, fx) {
   ctx.font = font(9, 'bold', FONT_DISPLAY);
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
-  fillSpacedText(ctx, 'COMPLAINTS', x + 12, y + 26, 1.4);
+  fillSpacedText(ctx, 'STRIKES', x + 12, y + 26, 1.4);
 
   for (let i = 0; i < MAX_COMPLAINTS; i++) {
     const slipX = x + 104 + i * 26;
@@ -235,6 +235,52 @@ function drawStrikes(ctx, game, fx) {
     }
     ctx.restore();
   }
+  drawStrikeNote(ctx, fx, game.mode === 'rush' ? 96 : 70);
+}
+
+const STRIKE_NOTE_SECONDS = 5;
+
+/**
+ * The card under the strike counter after a strike: what went wrong, for whom,
+ * and what to do instead. Without it, a complaint is just a funny line and a
+ * filled slip, and a new player can't tell what they did.
+ */
+function drawStrikeNote(ctx, fx, top) {
+  const note = fx.strikeNote;
+  if (!note || note.age > STRIKE_NOTE_SECONDS) return;
+  const { headline, detail, advice } = explainStrike(note.entry);
+  const width = 320;
+  const height = 74;
+  const slide = easeOutBack(clamp(note.age / 0.3, 0, 1));
+  const fade = clamp((STRIKE_NOTE_SECONDS - note.age) / 0.4, 0, 1);
+  const x = CANVAS_WIDTH - 16 - width;
+  const y = top - (1 - slide) * 16;   // below the Rush badge in Rush
+  const color = note.entry.reason === 'tooSlow' ? '#b0700b' : note.entry.reason === 'breach' ? '#8a3fc2' : PALETTE.danger;
+
+  ctx.save();
+  ctx.globalAlpha = fade;
+  drawCard(ctx, x, y, width, height, { radius: 12, fill: '#fffdf7' });
+  fillRoundRect(ctx, x, y, 6, height, 3, color);
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = color;
+  ctx.font = font(11, 'bold', FONT_DISPLAY);
+  fillSpacedText(ctx, `STRIKE ${note.number} OF ${MAX_COMPLAINTS}: ${headline}`, x + 18, y + 17, 1.2);
+  ctx.fillStyle = PALETTE.ink;
+  ctx.font = font(12, 'bold');
+  ctx.fillText(fitText(ctx, detail, width - 30), x + 18, y + 38);
+  ctx.fillStyle = PALETTE.inkSoft;
+  ctx.font = font(11, '600');
+  ctx.fillText(fitText(ctx, advice, width - 30), x + 18, y + 57);
+  ctx.restore();
+}
+
+/** Shortens text with an ellipsis until it fits (uses the current font). */
+function fitText(ctx, text, maxWidth) {
+  if (ctx.measureText(text).width <= maxWidth) return text;
+  let cut = text;
+  while (cut.length > 1 && ctx.measureText(cut + '…').width > maxWidth) cut = cut.slice(0, -1);
+  return cut + '…';
 }
 
 // ---- Tips and legend ----

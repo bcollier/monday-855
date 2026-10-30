@@ -220,9 +220,10 @@ function drawEndScreen(ctx, game, fx) {
   ctx.textBaseline = 'middle';
   ctx.fillText(screen.quip, CANVAS_WIDTH / 2, y + 114);
 
-  // The two numbers the spec asks for: delivered and complaints
+  // The two numbers the spec asks for: delivered and complaints (strikes; a complaint IS a strike, SPEC §1).
+  // Two riders can complain on the same frame, so the count is capped at 3 for display.
   const statY = y + 146;
-  for (const [i, label, value] of [[0, 'PEOPLE DELIVERED', String(game.deliveredCount)], [1, 'COMPLAINTS', `${game.complaintCount} / ${MAX_COMPLAINTS}`]]) {
+  for (const [i, label, value] of [[0, 'PEOPLE DELIVERED', String(game.deliveredCount)], [1, 'STRIKES', `${Math.min(game.complaintCount, MAX_COMPLAINTS)} / ${MAX_COMPLAINTS}`]]) {
     const boxX = x + 36 + i * 240;
     fillRoundRect(ctx, boxX, statY, 228, 76, 12, PALETTE.paperShade);
     ctx.fillStyle = PALETTE.inkSoft;

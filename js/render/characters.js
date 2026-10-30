@@ -631,10 +631,31 @@ function drawPeopleOverlays(ctx, game, fx) {
     const visual = fx.visualOf(person);
     if (person.hasComplained) drawAngryCloud(ctx, visual.x, visual.y - 24, fx.time + person.id);
     else if (speed > person.type.comfortMaxSpeed - 8) drawSweat(ctx, visual.x, visual.y, fx.time);
+    // Warn BEFORE the complaint: a too-fast complaint is instant (SPEC 2.6), so this is the only notice.
+    if (!person.hasComplained && game.phase === 'playing') {
+      if (speed > person.type.comfortMaxSpeed - 12) drawRiderWarning(ctx, visual.x, visual.y - 30, '▼ SLOWER', PALETTE.danger, fx.time);
+      else if (person.mood === 'impatient') drawRiderWarning(ctx, visual.x, visual.y - 30, '▲ FASTER', '#b0700b', fx.time);
+    }
   }
   for (const walker of fx.walkers) {
     if (walker.person.hasComplained) drawAngryCloud(ctx, walker.visual.x, walker.visual.y - 24, fx.time + walker.person.id);
   }
+}
+
+/** A small pulsing tag over a rider who is about to complain. */
+function drawRiderWarning(ctx, x, y, text, color, time) {
+  const pulse = 1 + 0.08 * Math.sin(time * 14);
+  ctx.save();
+  ctx.font = font(9, 'bold', FONT_DISPLAY);
+  const width = ctx.measureText(text).width + 12;
+  ctx.translate(x, y);
+  ctx.scale(pulse, pulse);
+  fillRoundRect(ctx, -width / 2, -7, width, 14, 7, color);
+  ctx.fillStyle = '#ffffff';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, 0, 0.5);
+  ctx.restore();
 }
 
 /** Pedestrians passing on the far side of the sidewalk. Pure scenery. */

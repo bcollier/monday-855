@@ -77,10 +77,33 @@ function doormanRank(game) {
 /** "Intern · too fast · 64 °/s (max 60)" for the strike log on the end screen. */
 function describeComplaint(entry) {
   const type = PERSON_TYPES[entry.typeKey];
-  const who = entry.rareName ? entry.rareName.replace(/^./, (c) => c.toUpperCase()) : displayNameFor(entry.typeKey);
+  const who = whoComplained(entry);
   if (entry.reason === 'breach') return [who, 'got into the lobby'];
   if (entry.reason === 'tooFast') return [who, `too fast: ${Math.round(entry.speed)} °/s (max ${type.comfortMaxSpeed})`];
   return [who, `too slow: under ${type.comfortMinSpeed} °/s for 1.5 s`];
+}
+
+/** "Coffee intern", or for a rare look "The CEO (Late manager)" so the player knows which type it was. */
+function whoComplained(entry) {
+  if (!entry.rareName) return displayNameFor(entry.typeKey);
+  const rare = entry.rareName.replace(/^./, (c) => c.toUpperCase());
+  return entry.reason === 'breach' ? rare : `${rare} (${displayNameFor(entry.typeKey)})`;
+}
+
+/**
+ * Why a strike just happened, in plain words, for the card under the strike
+ * counter: { headline, detail, advice }. Same entry shape as describeComplaint.
+ */
+function explainStrike(entry) {
+  const type = PERSON_TYPES[entry.typeKey];
+  const who = whoComplained(entry);
+  if (entry.reason === 'breach') {
+    return { headline: 'LET IN A TROUBLEMAKER', detail: `${who} got into the lobby.`, advice: 'Hold ↓ while one is at the front.' };
+  }
+  if (entry.reason === 'tooFast') {
+    return { headline: 'TOO FAST', detail: `${who}: ${Math.round(entry.speed)} °/s, over their max of ${type.comfortMaxSpeed}.`, advice: 'Let go of SPACE sooner while they ride.' };
+  }
+  return { headline: 'TOO SLOW', detail: `${who} needed at least ${type.comfortMinSpeed} °/s.`, advice: 'Tap SPACE to keep the needle in their band.' };
 }
 
 // ---- The pigeon ----

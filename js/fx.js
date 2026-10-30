@@ -45,6 +45,7 @@ class Fx {
     this.shake = 0;
     this.strikesStamped = 0;
     this.strikeStampAge = [Infinity, Infinity, Infinity];
+    this.strikeNote = null;            // { entry, number, age }: why the latest strike happened
     this.deliveredBounce = 0;
     this.gateAmount = { street: 0, lobby: 0 };   // 0 = belt open, 1 = closed
     this.endScreenAge = 0;
@@ -113,6 +114,7 @@ class Fx {
     this.shake *= Math.exp(-9 * dt);
     this.deliveredBounce = Math.max(0, this.deliveredBounce - dt * 3);
     for (let i = 0; i < 3; i++) this.strikeStampAge[i] += dt;
+    if (this.strikeNote) this.strikeNote.age += dt;
 
     for (const side of ['street', 'lobby']) {
       const isHeld = game.phase === 'playing' && (side === 'street' ? controls.isStreetGateHeld : controls.isLobbyGateHeld);
@@ -213,9 +215,11 @@ class Fx {
       case 'complained':
         this.complaintLog.push({ typeKey: event.person.typeKey, reason: event.reason, speed: game.door.speed, rareName: this.visualOf(event.person).look.rare?.name });
         this.onComplaint(event.person, event.reason);
+        this.noteStrike(game);
         break;
       case 'breach':
         this.onBreach(event.person);
+        this.noteStrike(game);
         break;
       case 'turnedAway': {
         const visual = this.visualOf(event.person);
@@ -379,6 +383,13 @@ class Fx {
   }
 
   // ---- Complaints ----
+
+  /** Shows why the strike that was just logged happened (not in practice, where strikes don't count). */
+  noteStrike(game) {
+    if (game.mode === 'tutorial') return;
+    const entry = this.complaintLog[this.complaintLog.length - 1];
+    this.strikeNote = { entry, number: Math.min(game.complaintCount, MAX_COMPLAINTS), age: 0 };
+  }
 
   onComplaint(person, reason) {
     const visual = this.visualOf(person);

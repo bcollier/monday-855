@@ -126,6 +126,22 @@ function drawSpeechBubbles(ctx, fx) {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(text, bubbleX, bubbleY + height / 2 + 1);
+
+    // What actually went wrong, stamped on the bubble's corner: the funny line alone doesn't say.
+    if (bubble.tone !== 'calm') {
+      const reason = bubble.person.type.isTroublemaker ? 'GOT IN' : bubble.person.complaintReason === 'tooSlow' ? 'TOO SLOW' : 'TOO FAST';
+      ctx.font = font(9, 'bold', FONT_DISPLAY);
+      const chipWidth = ctx.measureText(reason).width + 14;
+      const chipX = bubbleX + width / 2 - chipWidth + 6;
+      const chipY = bubbleY - 9;
+      ctx.save();
+      ctx.translate(chipX + chipWidth / 2, chipY + 7);
+      ctx.rotate(-0.06);
+      fillRoundRect(ctx, -chipWidth / 2, -7, chipWidth, 14, 7, ctx.fillStyle);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(reason, 0, 0.5);
+      ctx.restore();
+    }
     ctx.restore();
   }
 }
