@@ -1,5 +1,9 @@
 # Monday, 8:55
 
+**Original game, spec and Phase 1 code by Yubo Zhang** ([zhangyubooo/monday-855](https://github.com/zhangyubooo/monday-855), imported unchanged as this repo's first commit). Phase 2, the inherited build described below, is by Ben Collier, working with Claude Code.
+
+**Play it in Chrome:** https://bcollier.github.io/monday-855/
+
 You are the doorman of an office building's revolving door during the five minutes before 9:00 on a Monday. Push the door, decide who gets to step in, and keep everyone's ride at a speed they can stand.
 
 **The full design is in [SPEC.md](SPEC.md).** This README covers what exists now (the v2 build, see [PLAN.md](PLAN.md)), how the code is organized, and how to check and tune it.
@@ -184,6 +188,31 @@ js/main.js            frame loop: one-shot keys -> rules in fixed steps -> fx ->
 tests/rules_test.js   rules tests (Node, no browser)
 tools/sim.js          balancing: plays many rounds with the autopilot
 ```
+
+### Restructuring from the original code, and why
+
+The original design is kept: the same classes (`Door`, `Person`, `Queue`, `Game`), the same names, the same `PERSON_TYPES` table, and the same rule that the rules never draw and drawing never changes the rules. Most changes extend those files rather than replace them.
+
+| Original file | What happened |
+|---|---|
+| `constants.js`, `door.js`, `person.js`, `queue.js`, `game.js`, `input.js`, `index.html` | **Kept and extended.** Between 66% and 94% of each file's original lines are still in it unchanged. New rules (courier, arrival ramp, lobby arrivals, phases, events, Rush) were added alongside the original code. |
+| `main.js` | **Kept and extended** with a fixed 1/120 s rules step, so the same inputs always give the same result (needed for the tests and the balancing bot). The original 0.1 s frame cap stays. |
+| `tests/rules_test.js` | **Kept and extended.** Tests that used a random source of `() => 0.99` were rewritten: that value only picked the intern because it was last in `PERSON_TYPES`, so adding the courier would have quietly turned them into courier tests. They now place a person of a chosen type with `gameWithOnly(type)`. |
+| `render.js` (154 lines) | **Replaced** by `js/render/*` (15 files) plus `fx.js`. This is the one substantial restructuring. |
+
+**Why the renderer was replaced.** The original `render.js` drew everything in one file with placeholder shapes, which was right for Phase 1. Phase 2 needed far more on screen: the speed meter, mood rings, walking and exit animations driven by rule events, readable strike explanations, and two switchable looks. Putting all of that in one file would have made it unreadable, so drawing was split by responsibility. Each original function has a direct successor:
+
+| Original (`render.js`) | Now |
+|---|---|
+| `drawGame()` | `render/frame.js`, same name, same role: all layers, back to front |
+| `pointAroundDoor()` | `render/layout.js`, same name (the only place angles become pixels) |
+| `drawBackground()` | `render/scene.js` |
+| `drawDoor()` | `render/doorway.js` |
+| `drawQueue()`, `drawPerson()` | `render/layout.js` (positions) and `render/characters.js` (figures) |
+| `drawHud()` | `render/hud.js`, same name |
+| `drawEndScreen()` | `render/screens.js`, same name |
+
+**How much of the original survives.** Counting the original's non-blank code lines that still appear unchanged in this version: about 77% of everything except `render.js` (472 of 616 lines), and about 61% including it. The renderer's drawing code is mostly new, but its structure and names carry over.
 
 ### How a frame flows
 
