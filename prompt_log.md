@@ -100,14 +100,16 @@ Two options were offered: (A) only document it, or (B) add the office worker now
 ## 8. Inheriting the project
 
 **Prompt:**
-> create a clone of this https://github.com/zhangyubooo/monday-855 locally, and commit it to my own public repo as initial commit. […] Explain how the code is structured, what works, and which acceptance criteria look closest to done. Don't change anything yet.
+> create a clone of this https://github.com/zhangyubooo/monday-855 locally, and commit it to my own public repo as intiital commit.
+>
+> Here is a game I've inherited, along with the original author's spec. Explain how the code is structured, what works, and which acceptance criteria look closest to done. Don't change anything yet.
 
 **What happened:** The repo was cloned and re-committed as one initial commit (crediting the original author) to a new public repo. Claude read every file and summarized the structure and criteria status. It found one problem the README missed: several tests used a random source of `() => 0.99`, which only picked the intern because it was last in `PERSON_TYPES`. Adding the courier would have quietly turned them into courier tests.
 
 ## 9. Planning
 
 **Prompt:**
-> build a plan to create a very high end version of what the spec is asking for. I want it to be beautiful, fun, etc. the dream version if it takes 10 hours of building that is fine
+> ok, build a plan to create a very high end version of what the spec is asking for. I want it to be beautiful, fun, etc. the dream version if it takes 10 hours of building that is fine
 
 **What happened:** Claude wrote PLAN.md: stay inside the spec's constraints (no libraries, no assets, no sound), add no new mechanics, and get spec-complete before polishing. Sound was flagged as a decision for the owner; the default was to keep the spec's "no sound".
 
@@ -179,7 +181,28 @@ Mistakes caught along the way:
 - a new scenario name clashed with an existing one (`rush`), renamed `rushMode`
 - the owl receptionist was drawn on top of the human one
 
-## 13. Tuning for "tense but fair"
+## 13. Morning check-in: publishing, sound, spec drift
+
+**Prompts:**
+> always give the link to play in chrome
+
+> turn on pages
+
+> I want to play it from web, never from local
+
+**What happened:** Claude turned on GitHub Pages, serving the `v2` branch, so the game plays at https://bcollier.github.io/monday-855/ with no login, and checked that the page and its scripts load. It saved the preference to always end with that web link, never a local path.
+
+**Prompt:**
+> is there any sound in the game
+
+**What happened:** No. SPEC §5 puts sound out of scope. Claude offered code-generated sound effects, off by default and leaving Classic unchanged, as an owner decision. Not taken up; the game is still silent.
+
+**Prompt:**
+> have you changed the spec since handoff?
+
+**What happened:** Claude said none of the original wording had changed, but two sections had been added to the end of SPEC.md. "Tuning changes (v2)" holds the one real rule change, the 2 s arrival walk-up. It affects Classic and was a judgment call the owner hadn't approved. Without it the careful bot survived 3% of rounds; with it, about 98%. The same section covers the queue's corner layout, which only changes how it looks. "Additions (v2)" covers Rush, the Tutorial and the Critter look. Claude offered to remove the walk-up so Classic matches the spec's wording exactly. That offer wasn't taken up, so the walk-up is still in.
+
+## 14. Tuning for "tense but fair"
 
 **Prompts:**
 > ok, how would I improve the fun factor of this game. here is what the spec says — use extra time to tune the numbers so the round feels tense but fair.
@@ -190,7 +213,18 @@ Mistakes caught along the way:
 
 Result: careful 79% in Classic and 70% in Rush. The sloppy bot reaches 8:59 in 85% of rounds, up from 47%. The 8:59 street line went from 2.3 to 3.4 people. The 4–6 target was missed; SPEC.md "Tuning changes" says why.
 
-## 14. "It's not clear what I'm doing wrong"
+**Prompt:**
+> why does careful bot not go as far as sloppy bot
+
+**What happened:** It does go further; Claude's summary had compared two different measures ("careful makes it to 9:00" against "sloppy reaches 8:59"). Measured the same way over 500 Classic rounds:
+
+| | Careful bot | Sloppy bot |
+|---|---|---|
+| Reaches 8:59 | 100% | 85% |
+| Makes it to 9:00 | 79% | 10% |
+| Average time before the round ends | 178 s | 157 s |
+
+## 15. "It's not clear what I'm doing wrong"
 
 **Prompts:**
 > i still haven't beet the game its hard and I don't know when i am getting these complaints it's not clear what I'm doing wrong
@@ -205,12 +239,16 @@ Result: careful 79% in Classic and 70% in Rush. The sloppy bot reaches 8:59 in 8
 
 Also fixed: the end screen could show "4 / 3" when two riders complained on the same frame.
 
-## 15. Rewards and more to do
+## 16. Rewards and more to do
 
 **Prompts:**
 > is there any reward for all these deliveries? any other game mechanics that might make it fun?
 
 > do all 1-4
+
+> done
+
+(The "done" was sent while Claude was waiting for the Pages build at the end of this step.)
 
 **What happened:** Claude proposed four Rush-only mechanics, keeping Classic as the spec describes (§5 rules out saved progress and levels, so every reward lives inside one round):
 1. earning a strike back with 10 happy deliveries in a row
@@ -219,3 +257,41 @@ Also fixed: the end screen could show "4 / 3" when two riders complained on the 
 4. perks bought with tips (1 coffee break, 2 security, 3 elevator music)
 
 Rules first (`js/rush.js` plus Game methods, 23 new tests), then the bot learned to use perks so the sim could measure them. The first prices made Rush too easy (the careful bot bought 12 perks a round and survived 93%). The streak bonus was capped at x2, VIP tips stopped being multiplied, and prices went up twice. The careful bot ended at 88% with about 8 perks a round. Then came the visuals, in `js/render/rush_hud.js`, checked in headless Chrome in both looks.
+
+## 17. Getting ready to submit
+
+**Prompts:**
+> where are we on monday 855
+
+> do you remember everything from our session? did you put everything in th prompt log
+
+**What happened:** Claude said it doesn't carry memory between sessions; it started from the repo, its docs and one saved preference (always give the web play link). It then read the earlier session's saved transcript and compared it with this log. The big build prompts were all logged. Five shorter prompts weren't: "always give the link to play in chrome", "turn on pages", "is there any sound in the game", "have you changed the spec since handoff?" and "why does careful bot not go as far as sloppy bot". It added those as §13 and the end of §14, and renumbered the sections after them.
+
+**Prompt:**
+> where are things at the game looks done, what do I need to do to submit https://www.cs.cmu.edu/~113/hw7.html
+
+**What happened:** Claude read the HW7 page and checked the repo against the Phase 2 requirements. It found:
+- `HANDOFF_REPORT.md` is missing. The assignment says not to use AI for it, so Claude left it for me.
+- All the work was on `v2`, but the repo's default branch `main` held only the initial import, so a grader opening the repo would see none of it.
+- The original `render.js` (about 20% of the code) had been replaced. About 61% of the original code lines survive overall (77% outside the renderer), which is close to the 75% preservation rule, and the README didn't explain the restructuring. My overnight instruction had allowed up to 30% removal, which is looser than the assignment's 25%.
+- The README didn't credit Yubo Zhang at the top.
+- This log had no clearly labelled example of the AI doing something unwanted, and §8 was not verbatim.
+
+**Prompt:**
+> yes do 3-6 log all prompts
+
+**What happened:** Claude fast-forwarded `main` to `v2` and pointed GitHub Pages at `main`. It added the credit to the top of the README, plus a "Restructuring from the original code, and why" section mapping each original `render.js` function to its successor. It searched the earlier transcript again, this time including prompts sent while Claude was mid-task, and found two more that weren't logged: "I want to play it from web, never from local" (now in §13) and "done" (now in §16). It also restored the §8 and §9 prompts word for word, since they had been shortened and slightly reworded. It added this section and the one below.
+
+## When the AI did something I didn't want
+
+**1. It changed a Classic rule without asking.** During the overnight build (§10), Claude added a 2 s walk-up before a new arrival can step into the door. It had a good reason: without it, people could appear and step into a fast door on the same frame, and even a careful bot survived only 3% of rounds. But the spec doesn't have this rule, Classic is supposed to match the spec, and I never approved it. It was recorded in SPEC.md "Tuning changes", but not raised with me.
+
+*What I did:* I asked "have you changed the spec since handoff?" (§13), which got a full list of everything that differs from the spec. I decided to keep the walk-up because the game is unplayable without it, and to keep it documented as a tuning change at the bottom of SPEC.md rather than editing the spec's original wording.
+
+**2. It removed more of the original code than the assignment allows for.** I said "do not remove more than 30% of the prior code" (§11). Claude replaced the whole original renderer, which brought the share of original code that survives close to the assignment's 75% minimum, and it didn't explain the restructuring in the README.
+
+*What I did:* Once I checked the assignment's rules (§17), I had the README document the restructuring: what was kept, what was replaced and why, which new function replaces each original one, and the measured share of original code that survives.
+
+**3. It reported misleading numbers.** After tuning (§14), Claude's summary compared "careful bot makes it to 9:00, 79%" with "sloppy bot reaches 8:59, 85%". Those are different measures, so the sloppy bot looked like it was doing better.
+
+*What I did:* I asked "why does careful bot not go as far as sloppy bot", and got both bots measured the same way: careful 79% to 9:00, sloppy 10%.
