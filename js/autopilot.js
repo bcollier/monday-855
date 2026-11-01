@@ -88,6 +88,8 @@ function decideAutopilot(game, pilot) {
   }
 }
 
+// Not art.js's clamp(): this file also runs in Node (tools/sim.js) without the
+// render files, and an empty range (max < min) settles on its middle.
 function clampSpeed(speed, min, max) {
   return max < min ? (min + max) / 2 : Math.max(min, Math.min(max, speed));
 }

@@ -101,6 +101,8 @@ function applyScenario(game, ui, scenario) {
     default:
       break;
   }
-  // People placed by a scenario are already standing in place: no walk-in.
+  // Drop the spawn and enter events from the setup above, so the people a
+  // scenario placed are drawn standing in place instead of walking in. The end
+  // screens' roundEnded event is the one the visual layer still needs.
   game.takeEvents().filter((event) => event.type === 'roundEnded').forEach((event) => game.emit(event));
 }
