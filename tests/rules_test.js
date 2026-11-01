@@ -1,20 +1,12 @@
 // rules_test.js
 // Checks the game rules without a browser. Run from the repo root:
 //   node tests/rules_test.js
-// It loads the logic files (not input/render/main, which need a browser) into one
-// shared scope, the same way index.html does, then drives Game.update() directly.
+// It loads the rule files through tools/load_rules.js (not input/render/main,
+// which need a browser), then drives Game.update() directly.
 // Each check names the acceptance criterion (AC #) from SPEC.md it covers.
 // If you change a rule on purpose, update the matching check here too.
-const fs = require('fs');
-const vm = require('vm');
-const path = require('path');
-const root = path.join(__dirname, '..');
-const ctx = vm.createContext({ Math, console });
-let code = '';
-for (const f of ['constants', 'door', 'person', 'queue', 'rush', 'game']) code += fs.readFileSync(path.join(root, 'js', f + '.js'), 'utf8') + '\n';
-code += 'this.api = { Game, Door, Person, Queue, PERSON_TYPES, angleDistance, pickPersonTypeKey, sharedComfortRange, FINAL_MINUTE_STARTS_AT, PERKS, EARN_BACK_STREAK, JOB_KINDS, JOB_REWARD_TIPS };';
-vm.runInContext(code, ctx);
-const { Game, Door, Person, PERSON_TYPES, angleDistance, pickPersonTypeKey, sharedComfortRange, FINAL_MINUTE_STARTS_AT, PERKS, EARN_BACK_STREAK, JOB_KINDS, JOB_REWARD_TIPS } = ctx.api;
+const { loadRules } = require('../tools/load_rules');
+const { Game, Door, Person, PERSON_TYPES, angleDistance, pickPersonTypeKey, sharedComfortRange, FINAL_MINUTE_STARTS_AT, PERKS, EARN_BACK_STREAK, JOB_KINDS, JOB_REWARD_TIPS } = loadRules();
 
 let failures = 0;
 function check(name, cond, extra = '') { console.log((cond ? 'PASS ' : 'FAIL ') + name + (extra ? '  [' + extra + ']' : '')); if (!cond) failures++; }

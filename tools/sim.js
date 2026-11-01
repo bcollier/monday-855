@@ -4,17 +4,9 @@
 //   node tools/sim.js            # 200 rounds each of the careful and sloppy player
 //   node tools/sim.js 500        # more rounds
 //   node tools/sim.js 200 rush   # Rush mode (troublemakers)
-// Loads the rule files the same way tests/rules_test.js does: no browser needed.
-const fs = require('fs');
-const vm = require('vm');
-const path = require('path');
-const root = path.join(__dirname, '..');
-const ctx = vm.createContext({ Math, console });
-let code = '';
-for (const f of ['constants', 'door', 'person', 'queue', 'rush', 'game', 'autopilot']) code += fs.readFileSync(path.join(root, 'js', f + '.js'), 'utf8') + '\n';
-code += 'this.api = { Game, createAutopilot, autopilotControls, FINAL_MINUTE_STARTS_AT, SIMULATION_STEP };';
-vm.runInContext(code, ctx);
-const { Game, createAutopilot, autopilotControls, FINAL_MINUTE_STARTS_AT, SIMULATION_STEP } = ctx.api;
+// Loads the rule files through tools/load_rules.js: no browser needed.
+const { loadRules } = require('./load_rules');
+const { Game, createAutopilot, autopilotControls, FINAL_MINUTE_STARTS_AT, SIMULATION_STEP } = loadRules(['autopilot']);
 
 const rounds = Number(process.argv[2]) || 200;
 const mode = process.argv[3] || 'classic';
