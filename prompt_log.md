@@ -282,6 +282,16 @@ Rules first (`js/rush.js` plus Game methods, 23 new tests), then the bot learned
 
 **What happened:** Claude fast-forwarded `main` to `v2` and pointed GitHub Pages at `main`. It added the credit to the top of the README, plus a "Restructuring from the original code, and why" section mapping each original `render.js` function to its successor. It searched the earlier transcript again, this time including prompts sent while Claude was mid-task, and found two more that weren't logged: "I want to play it from web, never from local" (now in §13) and "done" (now in §16). It also restored the §8 and §9 prompts word for word, since they had been shortened and slightly reworded. It added this section and the one below.
 
+**Prompt:**
+> do we have this Interface 27. Pressing D toggles a debug o
+
+**What happened:** Claude checked the code: D toggles `ui.showDebug` in `main.js`, and `drawDebugOverlay()` in `render/hud.js` shows the door's exact speed in °/s and the real seconds, plus the game clock, spawn interval, line lengths, riders and frame rate. AC #27 is met.
+
+**Prompt:**
+> ok, commit my notes, clean up the formatting
+
+**What happened:** I wrote HANDOFF_REPORT.md myself. Claude changed only its formatting: a title, each question as a heading with its guidance in italics, and single blank lines between sections. My wording was left exactly as written, and the file was committed.
+
 ## When the AI did something I didn't want
 
 **1. It changed a Classic rule without asking.** During the overnight build (§10), Claude added a 2 s walk-up before a new arrival can step into the door. It had a good reason: without it, people could appear and step into a fast door on the same frame, and even a careful bot survived only 3% of rounds. But the spec doesn't have this rule, Classic is supposed to match the spec, and I never approved it. It was recorded in SPEC.md "Tuning changes", but not raised with me.
