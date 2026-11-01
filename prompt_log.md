@@ -95,7 +95,7 @@ Two options were offered: (A) only document it, or (B) add the office worker now
 
 ## Tools
 
-- **Claude Code** (Anthropic), model Claude Opus 5.5, in VS Code.
+- **Claude Code** (Anthropic), model Claude Opus 5.5, in VS Code. The cleanup pass in §17 used Claude Fable 5.1.
 
 ## 8. Inheriting the project
 
@@ -291,6 +291,11 @@ Rules first (`js/rush.js` plus Game methods, 23 new tests), then the bot learned
 > ok, commit my notes, clean up the formatting
 
 **What happened:** I wrote HANDOFF_REPORT.md myself. Claude changed only its formatting: a title, each question as a heading with its guidance in italics, and single blank lines between sections. My wording was left exactly as written, and the file was committed.
+
+**Prompt:**
+> do any code cleanup or refactoring that the repo would benefit from
+
+**What happened:** Claude surveyed the code first: no unused top-level names, no `var` or `==`, no leftover debug logging, no duplicated drawing helpers. Because of the assignment's 75% rule it only touched v2 code. The changes: the Node loader that `tests/rules_test.js` and `tools/sim.js` each had a copy of became `tools/load_rules.js`, which also runs each rule file as its own script so an error's stack trace names the file; a misleading comment at the end of `applyScenario()` was rewritten; a note explains why the autopilot has its own `clamp`; and the README code map lists the loader. It considered, and left alone, two bigger moves: making the title screen start Classic through `startMode()` like the other modes (the current `start()` path is the one AC #30's test covers), and splitting the two biggest files, `fx.js` and `characters.js`, which would be restructuring for its own sake the night before the deadline. Tests, both sim modes and a browser screenshot were checked afterwards.
 
 ## When the AI did something I didn't want
 

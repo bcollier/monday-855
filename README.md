@@ -186,6 +186,7 @@ js/render/screens.js  title, pause, end screens
 js/render/frame.js    drawGame(): all layers, back to front
 js/main.js            frame loop: one-shot keys -> rules in fixed steps -> fx -> draw
 tests/rules_test.js   rules tests (Node, no browser)
+tools/load_rules.js   loads the rule files into one scope for Node (used by the tests and the sim)
 tools/sim.js          balancing: plays many rounds with the autopilot
 ```
 
